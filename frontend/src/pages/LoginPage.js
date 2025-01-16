@@ -26,10 +26,29 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center">
-      <div className="w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-6 md:p-8">
+    <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center px-4 sm:px-0">
+      {/* For larger screens, show the container */}
+      <div className="hidden sm:block w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-6 md:p-8">
+        {/* Common Content */}
+        {renderContent()}
+      </div>
+
+      {/* For mobile view, show content directly */}
+      <div className="block sm:hidden w-full">
+        {renderContent(true)}
+      </div>
+    </div>
+  );
+
+  function renderContent(isMobile = false) {
+    return (
+      <div className={isMobile ? "space-y-4" : ""}>
         {/* Title */}
-        <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-2">
+        <h1
+          className={`text-3xl font-extrabold text-center text-gray-800 ${
+            isMobile ? "mt-4" : "mb-2"
+          }`}
+        >
           Hello Again!
         </h1>
 
@@ -39,7 +58,7 @@ const LoginPage = () => {
         </p>
 
         {/* Form */}
-        <div className="space-y-2">
+        <div className="space-y-2 px-2">
           {/* Email or Username Input */}
           <div>
             <h2 className="text-sm font-semibold text-gray-700 mb-1">
@@ -90,7 +109,7 @@ const LoginPage = () => {
         </div>
 
         {/* Actions Section */}
-        <div className="mt-4">
+        <div className="mt-4 px-2">
           <button
             onClick={handleLogin}
             className="w-full py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
@@ -104,14 +123,14 @@ const LoginPage = () => {
           </div>
           <button
             onClick={handleLoginWithGoogle}
-            className="w-full py-2 bg-red-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-red-600 text-sm"
+            className="w-full py-2 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
           >
             <FaGoogle className="mr-2" /> Sign in with Google
           </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 };
 
 export default LoginPage;
