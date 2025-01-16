@@ -27,7 +27,7 @@ const RegisterPage = () => {
   return (
     <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center px-4 sm:px-0">
       {/* For larger screens, show the container */}
-      <div className="hidden sm:block w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-6 md:p-8">
+      <div className="hidden sm:block w-full max-w-md bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-6 md:p-8">
         {renderContent()}
       </div>
 
@@ -56,7 +56,7 @@ const RegisterPage = () => {
         </p>
 
         {/* Form */}
-        <div className="space-y-2 px-2">
+        <div className={`space-y-2 ${isMobile ? "px-2" : ""}`}>
           {/* First Name and Last Name */}
           <div className="flex space-x-4">
             <div className="w-1/2">
@@ -69,7 +69,7 @@ const RegisterPage = () => {
                 value={formData.firstName}
                 onChange={handleInputChange}
                 placeholder="First Name"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <div className="w-1/2">
@@ -82,7 +82,7 @@ const RegisterPage = () => {
                 value={formData.lastName}
                 onChange={handleInputChange}
                 placeholder="Last Name"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
           </div>
@@ -98,7 +98,7 @@ const RegisterPage = () => {
               value={formData.username}
               onChange={handleInputChange}
               placeholder="Username"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -111,7 +111,7 @@ const RegisterPage = () => {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Email"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -127,7 +127,7 @@ const RegisterPage = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="button"
@@ -141,10 +141,10 @@ const RegisterPage = () => {
         </div>
 
         {/* Actions Section */}
-        <div className="mt-4 px-2">
+        <div className={`mt-4 ${isMobile ? "px-2" : ""}`}>
           <button
             onClick={handleRegister}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
+            className="w-full py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
           >
             Register
           </button>
@@ -155,7 +155,7 @@ const RegisterPage = () => {
           </div>
           <button
             onClick={handleRegisterWithGoogle}
-            className="w-full py-2 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
+            className="w-full py-3 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
           >
             <FaGoogle className="mr-2" /> Sign up with Google
           </button>

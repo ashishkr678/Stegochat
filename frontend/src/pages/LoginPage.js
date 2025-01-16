@@ -34,9 +34,7 @@ const LoginPage = () => {
       </div>
 
       {/* For mobile view, show content directly */}
-      <div className="block sm:hidden w-full">
-        {renderContent(true)}
-      </div>
+      <div className="block sm:hidden w-full">{renderContent(true)}</div>
     </div>
   );
 
@@ -58,7 +56,7 @@ const LoginPage = () => {
         </p>
 
         {/* Form */}
-        <div className="space-y-2 px-2">
+        <div className={`space-y-2 ${isMobile ? "px-2" : ""}`}>
           {/* Email or Username Input */}
           <div>
             <h2 className="text-sm font-semibold text-gray-700 mb-1">
@@ -70,7 +68,7 @@ const LoginPage = () => {
               value={formData.emailOrUsername}
               onChange={handleInputChange}
               placeholder="Email or Username"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -86,7 +84,7 @@ const LoginPage = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="button"
@@ -109,10 +107,10 @@ const LoginPage = () => {
         </div>
 
         {/* Actions Section */}
-        <div className="mt-4 px-2">
+        <div className={`mt-4 ${isMobile ? "px-2" : ""}`}>
           <button
             onClick={handleLogin}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
+            className="w-full py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
           >
             Get Started
           </button>
@@ -123,7 +121,7 @@ const LoginPage = () => {
           </div>
           <button
             onClick={handleLoginWithGoogle}
-            className="w-full py-2 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
+            className="w-full py-3 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
           >
             <FaGoogle className="mr-2" /> Sign in with Google
           </button>
