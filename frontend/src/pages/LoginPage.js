@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -28,7 +29,7 @@ const LoginPage = () => {
   return (
     <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center px-4 sm:px-0">
       {/* For larger screens, show the container */}
-      <div className="hidden sm:block w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-6 md:p-8">
+      <div className="hidden sm:block w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-5">
         {/* Common Content */}
         {renderContent()}
       </div>
@@ -44,7 +45,7 @@ const LoginPage = () => {
         {/* Title */}
         <h1
           className={`text-3xl font-extrabold text-center text-gray-800 ${
-            isMobile ? "mt-4" : "mb-2"
+            isMobile ? "mt-4" : ""
           }`}
         >
           Hello Again!
@@ -68,7 +69,7 @@ const LoginPage = () => {
               value={formData.emailOrUsername}
               onChange={handleInputChange}
               placeholder="Email or Username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -84,7 +85,7 @@ const LoginPage = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="button"
@@ -110,20 +111,21 @@ const LoginPage = () => {
         <div className={`mt-4 ${isMobile ? "px-2" : ""}`}>
           <button
             onClick={handleLogin}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
+            className="w-full bg-blue-600 text-white py-[8px] px-[12px] rounded-[8px] font-medium hover:bg-blue-700"
           >
             Get Started
           </button>
-          <div className="flex items-center my-2">
+          <div className="flex items-center my-1">
             <hr className="flex-grow border-gray-300" />
-            <span className="px-4 text-gray-500 text-sm">or</span>
+            <span className="px-4 text-gray-400 font-medium text-sm">or</span>
             <hr className="flex-grow border-gray-300" />
           </div>
           <button
             onClick={handleLoginWithGoogle}
-            className="w-full py-3 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
+            className="w-full flex items-center justify-center rounded-[8px] font-medium text-gray-900 border-gray-300 bg-yellow-500 hover:bg-yellow-600 border px-[12px] py-[8px] gap-x-2"
           >
-            <FaGoogle className="mr-2" /> Sign in with Google
+            <FcGoogle />
+            <p>Sign in with Google</p>
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -27,7 +28,7 @@ const RegisterPage = () => {
   return (
     <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center px-4 sm:px-0">
       {/* For larger screens, show the container */}
-      <div className="hidden sm:block w-full max-w-md bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-6 md:p-8">
+      <div className="hidden sm:block w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-5">
         {renderContent()}
       </div>
 
@@ -44,7 +45,7 @@ const RegisterPage = () => {
         {/* Title */}
         <h1
           className={`text-3xl font-extrabold text-center text-gray-800 ${
-            isMobile ? "mt-4" : "mb-2"
+            isMobile ? "mt-4" : ""
           }`}
         >
           Welcome Aboard!
@@ -69,7 +70,7 @@ const RegisterPage = () => {
                 value={formData.firstName}
                 onChange={handleInputChange}
                 placeholder="First Name"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <div className="w-1/2">
@@ -82,7 +83,7 @@ const RegisterPage = () => {
                 value={formData.lastName}
                 onChange={handleInputChange}
                 placeholder="Last Name"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
           </div>
@@ -98,7 +99,7 @@ const RegisterPage = () => {
               value={formData.username}
               onChange={handleInputChange}
               placeholder="Username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -111,7 +112,7 @@ const RegisterPage = () => {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -127,7 +128,7 @@ const RegisterPage = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="button"
@@ -144,20 +145,20 @@ const RegisterPage = () => {
         <div className={`mt-4 ${isMobile ? "px-2" : ""}`}>
           <button
             onClick={handleRegister}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 text-sm"
+            className="w-full bg-blue-600 text-white py-[8px] px-[12px] rounded-[8px] font-medium hover:bg-blue-700"
           >
             Register
           </button>
-          <div className="flex items-center my-2">
+          <div className="flex items-center my-1">
             <hr className="flex-grow border-gray-300" />
-            <span className="px-4 text-gray-500 text-sm">or</span>
+            <span className="px-4 text-gray-400 text-sm">or</span>
             <hr className="flex-grow border-gray-300" />
           </div>
           <button
             onClick={handleRegisterWithGoogle}
-            className="w-full py-3 bg-amber-500 text-white flex items-center justify-center rounded-lg shadow hover:bg-amber-600 text-sm"
+            className="w-full flex items-center justify-center rounded-[8px] font-medium text-gray-900 border-gray-300 bg-yellow-500 hover:bg-yellow-600 border px-[12px] py-[8px] gap-x-2"
           >
-            <FaGoogle className="mr-2" /> Sign up with Google
+            <FcGoogle className="mr-2" /> Sign up with Google
           </button>
         </div>
       </div>
