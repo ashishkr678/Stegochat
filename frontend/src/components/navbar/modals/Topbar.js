@@ -5,7 +5,7 @@ const Topbar = ({ toggleSidebar }) => {
   const [selected, setSelected] = useState(null);
 
   const handleClick = (id) => {
-    setSelected(id === selected ? null : id); // Toggle selected state
+    setSelected(id === selected ? null : id);
   };
 
   return (

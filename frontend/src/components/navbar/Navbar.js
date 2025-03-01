@@ -1,19 +1,19 @@
 import React, { useState } from "react";
-import Topbar from "./Navigation/Topbar";
-import Sidebar from "./Navigation/Sidebar";
+import Topbar from "./modals/Topbar";
+import Sidebar from "./modals/Sidebar";
 
-const Navigation = () => {
+const Navbar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <>
-      {/* Topbar (Fixed and Overlay) */}
+      {/* Topbar */}
       <Topbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-      {/* Sidebar (Fixed and Overlay) */}
+      {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} />
     </>
   );
 };
 
-export default Navigation;
+export default Navbar;

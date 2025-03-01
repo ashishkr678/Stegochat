@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { MessageCircle, Users, Download } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Sidebar = ({ isOpen }) => {
   const [selected, setSelected] = useState(null);
 
   const handleClick = (id) => {
-    setSelected(id === selected ? null : id); // Toggle selected state
+    setSelected(id === selected ? null : id);
   };
 
   return (
@@ -21,13 +22,15 @@ const Sidebar = ({ isOpen }) => {
             isOpen ? "justify-start pl-4" : "justify-center"
           }`}
         >
-          <MessageCircle
-            size={20}
-            className={`${
-              selected === 1 ? "fill-current text-gray-700" : "text-gray-700"
-            }`}
-          />
-          {isOpen && <span>Chats</span>}
+          <Link to="/">
+            <MessageCircle
+              size={20}
+              className={`${
+                selected === 1 ? "fill-current text-gray-700" : "text-gray-700"
+              }`}
+            />
+            {isOpen && <span>Chats</span>}
+          </Link>
         </button>
         <button
           onClick={() => handleClick(2)}
