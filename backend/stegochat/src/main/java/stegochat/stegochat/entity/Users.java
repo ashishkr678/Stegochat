@@ -1,46 +1,53 @@
 package stegochat.stegochat.entity;
 
-import lombok.*;
-import org.bson.types.ObjectId;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 @Document(collection = "users")
 @Data
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Users {
+public class Users extends BaseEntity {
     @Id
-    private ObjectId id;  // MongoDB Auto-generated Unique ID
+    private String id;
 
     @Indexed(unique = true)
-    private String username;  // Unique & Indexed Username (Primary Identifier)
+    private String username;
 
     @Indexed(unique = true)
-    private String email;  // Ensures unique email
-    
+    private String email;
+
     private String firstName;
     private String lastName;
     private String phone;
-    private String password;  // Store as HASHED (e.g., BCrypt)
+    private String password;
     private String profilePicture;
     private String about;
 
     @Builder.Default
-    private Set<String> friends = new HashSet<>(); // Friends list for chat
+    private Set<String> friends = new HashSet<>();
 
     @Builder.Default
-    private Set<String> sentRequests = new HashSet<>(); // Sent friend requests
+    private Set<String> sentRequests = new HashSet<>();
 
     @Builder.Default
-    private Set<String> receivedRequests = new HashSet<>(); // Received friend requests
+    private Set<String> receivedRequests = new HashSet<>();
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    // ✅ Metadata for Enterprise Analytics (e.g., last login, device info)
+    @Builder.Default
+    private Map<String, Object> metadata = new HashMap<>();
 }

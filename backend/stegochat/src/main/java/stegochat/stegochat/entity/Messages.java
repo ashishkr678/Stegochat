@@ -1,57 +1,58 @@
 package stegochat.stegochat.entity;
 
-import lombok.*;
-import org.bson.types.ObjectId;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import stegochat.stegochat.entity.enums.MessageType;
+import stegochat.stegochat.entity.records.DeletionRecord;
+import stegochat.stegochat.entity.records.MessageStatusRecord;
 
 @Document(collection = "messages")
 @Data
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Messages {
+public class Messages extends BaseEntity {
     @Id
-    private ObjectId id;  // MongoDB Auto-generated ID
-
+    private String id;
+    
     private String senderUsername;
     private String receiverUsername;
-
     private MessageType messageType;
-    private String content;  // Encrypted message content
+    private String content;  // Encrypted message text
 
     private boolean isEdited;
     private boolean isSoftDeleted;
     private boolean isRecalled;
 
     @Builder.Default
-    private Set<String> deletedForUsers = new HashSet<>(); // Tracks users who deleted it for themselves
+    private List<DeletionRecord> deletionRecords = new ArrayList<>(); // Who deleted & how (for me/everyone)
 
+    @Builder.Default
+    private List<MessageStatusRecord> statusHistory = new ArrayList<>(); // SENT, DELIVERED, READ tracking
 
-    private MessageStatus status;
-    private LocalDateTime sentAt;
-    private LocalDateTime deliveredAt;
-    private LocalDateTime readAt;
+    // ✅ Metadata for Audit Logs (timestamps, edits, etc.)
+    @Builder.Default
+    private Map<String, Object> metadata = new HashMap<>();
 
-    // Media File Handling
-    private String mediaFileId; // Reference to GridFS
+    // Media Files
+    private String mediaFileId;
     private String mediaFileName;
     private long mediaFileSize;
-    private String mediaContentType; // image/png, video/mp4, audio/mp3
-    private Long mediaDuration; // Duration for audio/video files (in seconds)
-    
-    private boolean isStego; // Flag to indicate if media is Stego
-    private ObjectId stegoId; // Link to Stego entity (Changed from String → ObjectId)
-
-    public enum MessageType {
-        TEXT, IMAGE, AUDIO, VIDEO, FILE, STEGO_IMAGE, STEGO_AUDIO
-    }
-
-    public enum MessageStatus {
-        SENT, DELIVERED, READ
-    }
+    private String mediaContentType;
+    private Long mediaDuration;
+    private boolean isStego;
+    private String stegoId;
 }
+
