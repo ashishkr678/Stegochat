@@ -11,8 +11,8 @@
     <groupId>stegochat</groupId>
     <artifactId>stegochat</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>stegochat</name>
-    <description>Stegochat Backend</description>
+    <name>stegochat-backend</name>
+    <description>Stegochat Backend Server</description>
     <url/>
     <licenses>
         <license/>
