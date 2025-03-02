@@ -1,5 +1,6 @@
 package stegochat.stegochat.entity;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,7 +22,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Users extends BaseEntity {
+public class UsersEntity extends BaseEntity {
     @Id
     private String id;
 
@@ -37,6 +38,7 @@ public class Users extends BaseEntity {
     private String password;
     private String profilePicture;
     private String about;
+    private LocalDate dateOfBirth;
 
     @Builder.Default
     private Set<String> friends = new HashSet<>();

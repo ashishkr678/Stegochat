@@ -20,7 +20,7 @@ import stegochat.stegochat.entity.enums.NotificationType;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Notifications extends BaseEntity {
+public class NotificationsEntity extends BaseEntity {
     @Id
     private String id;
 

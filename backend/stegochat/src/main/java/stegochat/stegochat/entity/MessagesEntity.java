@@ -23,7 +23,7 @@ import stegochat.stegochat.entity.records.MessageStatusRecord;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Messages extends BaseEntity {
+public class MessagesEntity extends BaseEntity {
     @Id
     private String id;
     
@@ -42,10 +42,6 @@ public class Messages extends BaseEntity {
     @Builder.Default
     private List<MessageStatusRecord> statusHistory = new ArrayList<>(); // SENT, DELIVERED, READ tracking
 
-    // ✅ Metadata for Audit Logs (timestamps, edits, etc.)
-    @Builder.Default
-    private Map<String, Object> metadata = new HashMap<>();
-
     // Media Files
     private String mediaFileId;
     private String mediaFileName;
@@ -54,5 +50,9 @@ public class Messages extends BaseEntity {
     private Long mediaDuration;
     private boolean isStego;
     private String stegoId;
+
+    // ✅ Metadata for Audit Logs (timestamps, edits, etc.)
+    @Builder.Default
+    private Map<String, Object> metadata = new HashMap<>();
 }
 
