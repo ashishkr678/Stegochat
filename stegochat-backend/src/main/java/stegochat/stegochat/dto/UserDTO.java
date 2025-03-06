@@ -15,6 +15,7 @@ public class UserDTO {
     private String email;
     private String firstName;
     private String lastName;
+    private String password;
     private String phone;
     private String profilePicture;
     private String about;
@@ -24,4 +25,5 @@ public class UserDTO {
     private Set<String> friends;
     private Set<String> sentRequests;
     private Set<String> receivedRequests;
+
 }
