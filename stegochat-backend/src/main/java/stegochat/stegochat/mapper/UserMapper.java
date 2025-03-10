@@ -1,6 +1,7 @@
 package stegochat.stegochat.mapper;
 
 import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
 
 public class UserMapper {
@@ -35,6 +36,21 @@ public class UserMapper {
                 .profilePicture(dto.getProfilePicture())
                 .about(dto.getAbout())
                 .dateOfBirth(dto.getDateOfBirth())
+                .build();
+    }
+
+    // ✅ NEW METHOD: Convert PendingRegistrationEntity to UsersEntity
+    public static UsersEntity toEntity(PendingRegistrationEntity pendingUser) {
+        return UsersEntity.builder()
+                .username(pendingUser.getUsername())
+                .email(pendingUser.getEmail())
+                .firstName(pendingUser.getFirstName())
+                .lastName(pendingUser.getLastName())
+                .phone(pendingUser.getPhone())
+                .password(pendingUser.getPassword()) // Already hashed
+                .profilePicture(pendingUser.getProfilePicture())
+                .about(pendingUser.getAbout())
+                .dateOfBirth(pendingUser.getDateOfBirth())
                 .build();
     }
 }

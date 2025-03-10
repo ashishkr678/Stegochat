@@ -2,12 +2,10 @@ package stegochat.stegochat.service;
 
 public interface EmailOtpService {
     
-    void sendOtp(String email, String type);  // Common method for registration and email update
+    void sendOtp(String email, String type);
 
-    void verifyOtp(String email, int otp, String type); // Common verification
+    void verifyOtp(String email, String otp, String type);
 
-    boolean isEmailVerified(String email);
-
-    void clearVerification(String email);
+    void clearVerification(String email, String type);
 
 }

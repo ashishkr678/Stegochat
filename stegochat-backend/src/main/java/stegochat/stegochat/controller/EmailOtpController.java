@@ -1,7 +1,11 @@
 package stegochat.stegochat.controller;
 
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import stegochat.stegochat.dto.otp.OtpRequestDto;
+import stegochat.stegochat.dto.otp.OtpVerificationDto;
 import stegochat.stegochat.service.EmailOtpService;
 
 import java.util.Map;
@@ -9,38 +13,20 @@ import java.util.Map;
 @CrossOrigin("*")
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class EmailOtpController {
 
     private final EmailOtpService emailOtpService;
 
-    public EmailOtpController(EmailOtpService emailOtpService) {
-        this.emailOtpService = emailOtpService;
-    }
-
     @PostMapping("/send-otp")
-    public ResponseEntity<Map<String, String>> sendOtp(@RequestBody Map<String, String> requestBody) {
-        String email = requestBody.get("email");
-        String type = requestBody.get("type");
-
-        if (email == null || type == null) {
-            throw new IllegalArgumentException("Email and type are required!");
-        }
-
-        emailOtpService.sendOtp(email, type);
-        return ResponseEntity.ok(Map.of("message", "OTP sent successfully to " + email));
+    public ResponseEntity<Map<String, String>> sendOtp(@Valid @RequestBody OtpRequestDto request) {
+        emailOtpService.sendOtp(request.getEmail(), request.getType());
+        return ResponseEntity.ok(Map.of("message", "OTP sent successfully to " + request.getEmail()));
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<Map<String, String>> verifyOtp(@RequestBody Map<String, Object> requestBody) {
-        String email = (String) requestBody.get("email");
-        Integer otp = (Integer) requestBody.get("otp");
-        String type = (String) requestBody.get("type");
-
-        if (email == null || otp == null || type == null) {
-            throw new IllegalArgumentException("Email, OTP, and type are required!");
-        }
-
-        emailOtpService.verifyOtp(email, otp, type);
+    public ResponseEntity<Map<String, String>> verifyOtp(@Valid @RequestBody OtpVerificationDto request) {
+        emailOtpService.verifyOtp(request.getEmail(), request.getOtp(), request.getType());
         return ResponseEntity.ok(Map.of("message", "OTP verified successfully."));
     }
 }

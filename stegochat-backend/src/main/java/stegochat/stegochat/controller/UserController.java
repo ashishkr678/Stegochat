@@ -1,22 +1,25 @@
 package stegochat.stegochat.controller;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
-import stegochat.stegochat.dto.UserDTO;
-import stegochat.stegochat.entity.UsersEntity;
-import stegochat.stegochat.exception.BadRequestException;
-import stegochat.stegochat.mapper.UserMapper;
-import stegochat.stegochat.security.CookieUtil;
-import stegochat.stegochat.service.UserService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.exception.BadRequestException;
+import stegochat.stegochat.security.CookieUtil;
+import stegochat.stegochat.service.UserService;
 
 @RestController
 @RequestMapping("/api/users")
@@ -27,25 +30,20 @@ public class UserController {
 
     // Step 1: Register User and Send OTP
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> registerUser(HttpServletRequest request, @RequestBody UserDTO userDTO) {
-        userService.initiateRegistration(request, userDTO);
-        request.getSession().setAttribute("pendingEmail", userDTO.getEmail()); // Store email instead of username
-        return ResponseEntity
-                .ok(Map.of("message", "OTP sent to " + userDTO.getEmail() + ". Verify to complete registration."));
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserDTO userDTO) {
+        userService.initiateRegistration(userDTO);
+        return ResponseEntity.ok(Map.of("message", "Registration initiated. OTP sent to " + userDTO.getEmail()));
     }
 
-    // Step 2: Verify OTP and Complete Registration
     @PostMapping("/register/verify-otp")
-    public ResponseEntity<UserDTO> verifyRegistrationOtp(HttpServletRequest request,
-            @RequestBody Map<String, Integer> requestBody) {
-        Integer otp = requestBody.get("otp");
-
-        UsersEntity registeredUser = userService.completeRegistration(request, otp);
-
-        // Convert UsersEntity to UserDTO to exclude sensitive fields
-        UserDTO userDTO = UserMapper.toDTO(registeredUser);
-
-        return ResponseEntity.ok(userDTO);
+    public ResponseEntity<UserDTO> verifyOtp(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String otp = request.get("otp"); // Extract OTP from request body
+        if (otp == null || otp.isEmpty()) {
+            throw new BadRequestException("OTP is required.");
+        }
+        UserDTO verifiedUser = userService.completeRegistration(email, otp);
+        return ResponseEntity.ok(verifiedUser);
     }
 
     @PostMapping("/login")
@@ -94,24 +92,6 @@ public class UserController {
 
         userService.updatePhoneNumber(httpServletRequest, newPhoneNumber);
         return ResponseEntity.ok(Map.of("message", "Phone number updated successfully."));
-    }
-
-    @PostMapping("/update-email")
-    public ResponseEntity<Map<String, String>> updateEmail(
-            HttpServletRequest request,
-            @RequestBody Map<String, Object> requestBody,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        String newEmail = (String) requestBody.get("email");
-        Integer otp = (Integer) requestBody.get("otp");
-
-        if (newEmail == null || otp == null) {
-            throw new IllegalArgumentException("New email and OTP are required!");
-        }
-
-        userService.updateEmail(request, newEmail, otp);
-
-        return ResponseEntity.ok(Map.of("message", "Email updated successfully."));
     }
 
     @PostMapping("/logout")

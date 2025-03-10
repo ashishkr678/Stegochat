@@ -1,7 +1,6 @@
 package stegochat.stegochat.service;
 
 import stegochat.stegochat.dto.UserDTO;
-import stegochat.stegochat.entity.UsersEntity;
 
 import java.util.Optional;
 
@@ -10,9 +9,9 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public interface UserService {
 
-    void initiateRegistration(HttpServletRequest request, UserDTO userDTO);
+    void initiateRegistration(UserDTO userDTO);
 
-    UsersEntity completeRegistration(HttpServletRequest request, int otp);
+    UserDTO completeRegistration(String email, String otp);
 
     void loginUser(String username, String password, HttpServletRequest request, HttpServletResponse response);
 
@@ -23,8 +22,6 @@ public interface UserService {
     void changePassword(HttpServletRequest request, String currentPassword, String newPassword);
 
     void updatePhoneNumber(HttpServletRequest request, String newPhoneNumber);
-
-    void updateEmail(HttpServletRequest request, String newEmail, int otp);
 
     void logout(String username, HttpServletRequest request, HttpServletResponse response);
     
