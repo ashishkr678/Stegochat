@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.AllArgsConstructor;
@@ -28,11 +29,14 @@ public class MessagesEntity extends BaseEntity {
     @Id
     private String id;
     
+    @Indexed
     private String senderUsername;
+
+    @Indexed
     private String receiverUsername;
+
     private MessageType messageType;
     private String content;
-
     private boolean isEdited;
     private boolean isSoftDeleted;
     private boolean isRecalled;
@@ -55,5 +59,6 @@ public class MessagesEntity extends BaseEntity {
     // ✅ Metadata for Audit Logs (timestamps, edits, etc.)
     @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
+    
 }
 

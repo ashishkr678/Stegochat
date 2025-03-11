@@ -1,22 +1,30 @@
 package stegochat.stegochat.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.BulkOperations;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.RestController;
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.dto.WebSocketMessageDTO;
 import stegochat.stegochat.entity.MessagesEntity;
+import stegochat.stegochat.entity.NotificationsEntity;
 import stegochat.stegochat.entity.UsersEntity;
 import stegochat.stegochat.entity.enums.MessageStatus;
 import stegochat.stegochat.entity.enums.MessageType;
+import stegochat.stegochat.entity.enums.NotificationType;
 import stegochat.stegochat.entity.records.MessageStatusRecord;
-import stegochat.stegochat.repository.MessageRepository;
-import stegochat.stegochat.repository.UserRepository;
-import stegochat.stegochat.security.EncryptionUtil;
 import stegochat.stegochat.exception.BadRequestException;
 import stegochat.stegochat.exception.ResourceNotFoundException;
+import stegochat.stegochat.repository.MessageRepository;
+import stegochat.stegochat.repository.NotificationRepository;
+import stegochat.stegochat.repository.UserRepository;
+import stegochat.stegochat.security.EncryptionUtil;
 
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
@@ -29,10 +37,13 @@ public class WebSocketController {
 
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
+    private final MongoTemplate mongoTemplate;
+    private final SimpMessagingTemplate messagingTemplate; // ✅ WebSocket Messaging for Notifications
 
+    // ✅ Send Message & Trigger Notification
     @MessageMapping("/chat")
-    @SendTo("/topic/messages")
-    public WebSocketMessageDTO sendMessage(WebSocketMessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
+    public void sendMessage(WebSocketMessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
         HttpSession session = (HttpSession) headerAccessor.getSessionAttributes().get("session");
         UserDTO senderUser = (session != null) ? (UserDTO) session.getAttribute("userProfile") : null;
 
@@ -83,7 +94,66 @@ public class WebSocketController {
 
         messageRepository.save(messageEntity);
 
-        return message;
+        // ✅ Send Notification to Receiver
+        NotificationsEntity notification = NotificationsEntity.builder()
+                .username(message.getReceiver())
+                .type(NotificationType.MESSAGE)
+                .message("New message from " + senderUser.getUsername())
+                .referenceId(messageEntity.getId())
+                .isRead(false)
+                .build();
+
+        notificationRepository.save(notification);
+        messagingTemplate.convertAndSend("/topic/notifications/" + message.getReceiver(), notification);
     }
 
+    // ✅ Batch Update Message Status (DELIVERED/READ)
+    @MessageMapping("/update-status")
+    public void updateMessageStatus(List<String> messageIds, String newStatus, SimpMessageHeaderAccessor headerAccessor) {
+        HttpSession session = (HttpSession) headerAccessor.getSessionAttributes().get("session");
+        UserDTO user = (session != null) ? (UserDTO) session.getAttribute("userProfile") : null;
+
+        if (user == null) {
+            throw new BadRequestException("User session expired. Please reconnect.");
+        }
+
+        // ✅ Validate message status
+        MessageStatus status;
+        try {
+            status = MessageStatus.valueOf(newStatus);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid message status.");
+        }
+
+        // ✅ Batch update message status
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, MessagesEntity.class);
+        Query query = new Query(Criteria.where("id").in(messageIds));
+        Update update = new Update().push("statusHistory", new MessageStatusRecord(status, LocalDateTime.now()));
+
+        bulkOps.updateMulti(query, update);
+        bulkOps.execute();
+    }
+
+    // ✅ Mark Notifications as Read in Real-Time
+    @MessageMapping("/notifications/read")
+    public void markNotificationsAsRead(List<String> notificationIds, SimpMessageHeaderAccessor headerAccessor) {
+        HttpSession session = (HttpSession) headerAccessor.getSessionAttributes().get("session");
+        UserDTO user = (session != null) ? (UserDTO) session.getAttribute("userProfile") : null;
+
+        if (user == null) {
+            throw new BadRequestException("User session expired. Please reconnect.");
+        }
+
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, NotificationsEntity.class);
+        Query query = new Query(Criteria.where("id").in(notificationIds));
+        Update update = new Update().set("isRead", true).set("readAt", LocalDateTime.now());
+
+        bulkOps.updateMulti(query, update);
+        bulkOps.execute();
+
+        // ✅ Send updated notifications list to frontend
+        List<NotificationsEntity> updatedNotifications = notificationRepository
+                .findByUsernameOrderByCreatedAtDesc(user.getUsername());
+        messagingTemplate.convertAndSend("/user/" + user.getUsername() + "/queue/notifications", updatedNotifications);
+    }
 }

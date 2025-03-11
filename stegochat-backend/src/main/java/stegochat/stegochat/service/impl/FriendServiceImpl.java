@@ -1,17 +1,26 @@
 package stegochat.stegochat.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.entity.UsersEntity;
+import stegochat.stegochat.entity.enums.NotificationType;
 import stegochat.stegochat.exception.BadRequestException;
 import stegochat.stegochat.exception.ResourceNotFoundException;
 import stegochat.stegochat.mapper.UserMapper;
 import stegochat.stegochat.repository.UserRepository;
+import stegochat.stegochat.security.CookieUtil;
 import stegochat.stegochat.security.EncryptionUtil;
 import stegochat.stegochat.service.FriendService;
-
+import stegochat.stegochat.service.NotificationService;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -21,118 +30,167 @@ import java.util.stream.Collectors;
 public class FriendServiceImpl implements FriendService {
 
     private final UserRepository userRepository;
+    private final MongoTemplate mongoTemplate;
+    private final NotificationService notificationService;
 
-    // ✅ Send Friend Request
+    // ✅ Send Friend Request & Trigger Notification
     @Override
     @Transactional
-    public void sendFriendRequest(String senderUsername, String receiverUsername) {
+    public void sendFriendRequest(HttpServletRequest request, String receiverUsername) {
+        String senderUsername = CookieUtil.extractUsernameFromCookie(request);
+
         if (senderUsername.equals(receiverUsername)) {
             throw new BadRequestException("You cannot send a friend request to yourself.");
         }
 
-        UsersEntity sender = userRepository.findByUsername(senderUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Sender not found."));
-        UsersEntity receiver = userRepository.findByUsername(receiverUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
-
-        if (sender.getFriends().contains(receiverUsername)) {
+        if (userRepository.existsByUsernameAndFriendsContaining(senderUsername, receiverUsername)) {
             throw new BadRequestException("You are already friends.");
         }
-        if (sender.getSentRequests().contains(receiverUsername)) {
+
+        List<UsersEntity> sentRequests = userRepository.findBySentRequestsContaining(senderUsername);
+        if (sentRequests.stream().anyMatch(user -> user.getUsername().equals(receiverUsername))) {
             throw new BadRequestException("Friend request already sent.");
         }
 
-        sender.getSentRequests().add(receiverUsername);
-        receiver.getReceivedRequests().add(senderUsername);
+        LocalDateTime now = LocalDateTime.now();
 
-        userRepository.save(sender);
-        userRepository.save(receiver);
+        // ✅ Bulk Update for efficiency
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(senderUsername)),
+                new Update()
+                        .addToSet("sentRequests", receiverUsername)
+                        .set("metadata.friendRequestsSent." + receiverUsername, now.toString()));
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(receiverUsername)),
+                new Update()
+                        .addToSet("receivedRequests", senderUsername)
+                        .set("metadata.friendRequestsReceived." + senderUsername, now.toString()));
+
+        bulkOps.execute();
+
+        // ✅ Create & Send Real-Time Notification
+        notificationService.createNotification(receiverUsername, "New friend request from " + senderUsername,
+                NotificationType.FRIEND_REQUEST, senderUsername);
     }
 
-    // ✅ Accept Friend Request
+    // ✅ Accept Friend Request & Trigger Notification
     @Override
     @Transactional
-    public void acceptFriendRequest(String receiverUsername, String senderUsername) {
-        UsersEntity receiver = userRepository.findByUsername(receiverUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
-        UsersEntity sender = userRepository.findByUsername(senderUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Sender not found."));
+    public void acceptFriendRequest(HttpServletRequest request, String senderUsername) {
+        String receiverUsername = CookieUtil.extractUsernameFromCookie(request);
 
-        if (!receiver.getReceivedRequests().contains(senderUsername)) {
+        List<UsersEntity> receivedRequests = userRepository.findByReceivedRequestsContaining(receiverUsername);
+        if (receivedRequests.stream().noneMatch(user -> user.getUsername().equals(senderUsername))) {
             throw new BadRequestException("No friend request found from this user.");
         }
 
-        // ✅ Add to friends list
-        receiver.getFriends().add(senderUsername);
-        sender.getFriends().add(receiverUsername);
-
-        // ✅ Remove from request lists
-        receiver.getReceivedRequests().remove(senderUsername);
-        sender.getSentRequests().remove(receiverUsername);
-
-        // ✅ Generate Encryption Keys for Secure Chat
+        // ✅ Generate Encryption Keys
         String senderKey = EncryptionUtil.generateFriendEncryptionKey(senderUsername, receiverUsername);
         String receiverKey = EncryptionUtil.generateFriendEncryptionKey(receiverUsername, senderUsername);
 
-        sender.getEncryptionKeys().put(receiverUsername, senderKey);
-        receiver.getEncryptionKeys().put(senderUsername, receiverKey);
+        LocalDateTime now = LocalDateTime.now();
 
-        userRepository.save(sender);
-        userRepository.save(receiver);
+        // ✅ Bulk Update
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(senderUsername)),
+                new Update()
+                        .addToSet("friends", receiverUsername)
+                        .pull("sentRequests", receiverUsername)
+                        .set("encryptionKeys." + receiverUsername, senderKey)
+                        .set("metadata.friendRequestsAccepted." + receiverUsername, now.toString()));
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(receiverUsername)),
+                new Update()
+                        .addToSet("friends", senderUsername)
+                        .pull("receivedRequests", senderUsername)
+                        .set("encryptionKeys." + senderUsername, receiverKey)
+                        .set("metadata.friendRequestsAccepted." + senderUsername, now.toString()));
+
+        bulkOps.execute();
+
+        // ✅ Create & Send Real-Time Notification
+        notificationService.createNotification(senderUsername, receiverUsername + " accepted your friend request!",
+                NotificationType.FRIEND_REQUEST_ACCEPTED, receiverUsername);
     }
 
     // ✅ Reject Friend Request
     @Override
     @Transactional
-    public void rejectFriendRequest(String receiverUsername, String senderUsername) {
-        UsersEntity receiver = userRepository.findByUsername(receiverUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
-        UsersEntity sender = userRepository.findByUsername(senderUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Sender not found."));
+    public void rejectFriendRequest(HttpServletRequest request, String senderUsername) {
+        String receiverUsername = CookieUtil.extractUsernameFromCookie(request);
 
-        if (!receiver.getReceivedRequests().contains(senderUsername)) {
+        // ✅ Check if request exists
+        List<UsersEntity> receivedRequests = userRepository.findByReceivedRequestsContaining(receiverUsername);
+        if (receivedRequests.stream().noneMatch(user -> user.getUsername().equals(senderUsername))) {
             throw new BadRequestException("No friend request found from this user.");
         }
 
-        // ✅ Remove from request lists
-        receiver.getReceivedRequests().remove(senderUsername);
-        sender.getSentRequests().remove(receiverUsername);
+        LocalDateTime now = LocalDateTime.now();
 
-        userRepository.save(sender);
-        userRepository.save(receiver);
+        // ✅ Bulk Update
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(senderUsername)),
+                new Update()
+                        .pull("sentRequests", receiverUsername)
+                        .set("metadata.friendRequestsRejected." + receiverUsername, now.toString()));
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(receiverUsername)),
+                new Update()
+                        .pull("receivedRequests", senderUsername)
+                        .set("metadata.friendRequestsRejected." + senderUsername, now.toString()));
+
+        bulkOps.execute();
     }
 
-    // ✅ Remove a Friend
+    // ✅ Remove Friend
     @Override
     @Transactional
-    public void removeFriend(String username, String friendUsername) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        UsersEntity friend = userRepository.findByUsername(friendUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Friend not found."));
+    public void removeFriend(HttpServletRequest request, String friendUsername) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
 
-        if (!user.getFriends().contains(friendUsername)) {
+        if (!userRepository.existsByUsernameAndFriendsContaining(username, friendUsername)) {
             throw new BadRequestException("You are not friends with this user.");
         }
 
-        user.getFriends().remove(friendUsername);
-        friend.getFriends().remove(username);
+        LocalDateTime now = LocalDateTime.now();
 
-        // ✅ Remove Encryption Keys
-        user.getEncryptionKeys().remove(friendUsername);
-        friend.getEncryptionKeys().remove(username);
+        // ✅ Bulk Update
+        BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
 
-        userRepository.save(user);
-        userRepository.save(friend);
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(username)),
+                new Update()
+                        .pull("friends", friendUsername)
+                        .unset("encryptionKeys." + friendUsername)
+                        .set("metadata.friendRemoved." + friendUsername, now.toString()));
+
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(friendUsername)),
+                new Update()
+                        .pull("friends", username)
+                        .unset("encryptionKeys." + username)
+                        .set("metadata.friendRemoved." + username, now.toString()));
+
+        bulkOps.execute();
     }
 
     // ✅ Get Friends List
     @Override
-    public List<UserDTO> getFriends(String username) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+    public List<UserDTO> getFriends(HttpServletRequest request) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
 
-        Set<String> friendUsernames = user.getFriends();
+        Set<String> friendUsernames = userRepository.findByUsername(username)
+                .map(UsersEntity::getFriends)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         return userRepository.findAllByUsernameIn(friendUsernames)
                 .stream()
@@ -142,14 +200,12 @@ public class FriendServiceImpl implements FriendService {
 
     // ✅ Get Pending Friend Requests
     @Override
-    public List<UserDTO> getPendingFriendRequests(String username) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+    public List<UserDTO> getPendingFriendRequests(HttpServletRequest request) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
 
-        Set<String> requestUsernames = user.getReceivedRequests();
+        List<UsersEntity> pendingRequests = userRepository.findByReceivedRequestsContaining(username);
 
-        return userRepository.findAllByUsernameIn(requestUsernames)
-                .stream()
+        return pendingRequests.stream()
                 .map(UserMapper::toDTO)
                 .collect(Collectors.toList());
     }

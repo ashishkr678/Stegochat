@@ -5,7 +5,7 @@ import stegochat.stegochat.entity.NotificationsEntity;
 
 public class NotificationMapper {
 
-    // ✅ Convert Entity to DTO (Hides metadata)
+    // ✅ Convert Entity to DTO
     public static NotificationDTO toDTO(NotificationsEntity notification) {
         return NotificationDTO.builder()
                 .id(notification.getId())
@@ -14,18 +14,20 @@ public class NotificationMapper {
                 .message(notification.getMessage())
                 .isRead(notification.isRead())
                 .readAt(notification.getReadAt())
+                .createdAt(notification.getCreatedAt()) // ✅ Ensure `createdAt` is included
                 .build();
     }
 
-    // ✅ Convert DTO to Entity (Metadata remains untouched)
+    // ✅ Convert DTO to Entity (Avoids Builder Limitation)
     public static NotificationsEntity toEntity(NotificationDTO dto) {
-        return NotificationsEntity.builder()
-                .id(dto.getId())
-                .username(dto.getUsername())
-                .type(dto.getType())
-                .message(dto.getMessage())
-                .isRead(dto.isRead())
-                .readAt(dto.getReadAt())
-                .build();
+        NotificationsEntity notification = NotificationsEntity.create(
+                dto.getUsername(),
+                dto.getType(),
+                dto.getMessage(),
+                null
+        );
+        notification.setRead(dto.isRead());
+        notification.setReadAt(dto.getReadAt());
+        return notification;
     }
 }

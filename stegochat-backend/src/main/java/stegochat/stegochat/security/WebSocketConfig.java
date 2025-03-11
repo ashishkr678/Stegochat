@@ -16,15 +16,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        config.enableSimpleBroker("/topic/messages", "/user/queue/notifications");
         config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins("*")
-                .addInterceptors(new WebSocketAuthInterceptor(jwtUtil)) // ✅ Pass `JwtUtil` to Interceptor
+                .addInterceptors(new WebSocketAuthInterceptor(jwtUtil))
                 .withSockJS();
     }
 }

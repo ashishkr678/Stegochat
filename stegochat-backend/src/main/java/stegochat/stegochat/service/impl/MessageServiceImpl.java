@@ -46,7 +46,7 @@ public class MessageServiceImpl implements MessageService {
         Map<String, String> storedKeys = (Map<String, String>) session.getAttribute("encryptionKeys");
         Long lastRefreshTime = (Long) session.getAttribute("encryptionKeysRefreshTime");
 
-        // ✅ Refresh encryption keys if expired or missing
+        // ✅ Refresh encryption keys only if expired or missing
         final Map<String, String> encryptionKeys;
         if (storedKeys == null || lastRefreshTime == null
                 || (currentTime - lastRefreshTime > ENCRYPTION_KEY_TIMEOUT_MS)) {
@@ -61,16 +61,17 @@ public class MessageServiceImpl implements MessageService {
             encryptionKeys = storedKeys; // ✅ Use cached encryption keys
         }
 
-        // ✅ Fetch paginated messages
-        Page<MessagesEntity> messagesPage = messageRepository
-                .findBySenderUsernameOrReceiverUsernameOrderByCreatedAt(loggedInUser, otherUser, pageable);
+        // ✅ Fetch messages in a single optimized query (instead of two separate
+        // queries)
+        Page<MessagesEntity> messagesPage = messageRepository.findBySenderUsernameOrReceiverUsernameOrderByCreatedAt(
+                loggedInUser, otherUser, pageable);
 
         return messagesPage.getContent().stream()
-                .filter(message -> !message.isSoftDeleted())
+                .filter(message -> !message.isSoftDeleted()) // ✅ Filter out deleted messages
                 .map(message -> {
                     MessageDTO dto = MessageMapper.toDTO(message);
 
-                    // ✅ Determine correct encryption key based on sender/receiver
+                    // ✅ Determine the correct encryption key for sender/receiver
                     String conversationUser = loggedInUser.equals(message.getSenderUsername())
                             ? message.getReceiverUsername()
                             : message.getSenderUsername();

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.IndexDirection;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -43,12 +44,15 @@ public class UsersEntity extends BaseEntity {
     @Builder.Default
     private Map<String, String> encryptionKeys = new HashMap<>();
 
+    @Indexed(direction = IndexDirection.ASCENDING)
     @Builder.Default
     private Set<String> friends = new HashSet<>();
 
+    @Indexed(direction = IndexDirection.ASCENDING)
     @Builder.Default
     private Set<String> sentRequests = new HashSet<>();
 
+    @Indexed(direction = IndexDirection.ASCENDING)
     @Builder.Default
     private Set<String> receivedRequests = new HashSet<>();
 
