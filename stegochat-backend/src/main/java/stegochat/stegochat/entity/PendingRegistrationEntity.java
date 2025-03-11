@@ -31,6 +31,6 @@ public class PendingRegistrationEntity {
     private String about;
     private LocalDate dateOfBirth;
 
-    @Indexed(expireAfterSeconds = 25)
+    @Indexed(expireAfterSeconds = 900)
     private LocalDateTime createdAt;
 }

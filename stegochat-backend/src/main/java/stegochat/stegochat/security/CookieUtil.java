@@ -32,4 +32,30 @@ public class CookieUtil {
                 .findFirst()
                 .orElse(null);
     }
+
+    public static String extractJwtFromCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+
+        return Arrays.stream(request.getCookies())
+                .filter(cookie -> "jwt".equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static Cookie createCookie(String name, String value, boolean httpOnly) {
+        boolean isProduction = "prod".equals(System.getenv("PROFILES_ACTIVE"));
+
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(httpOnly);
+        cookie.setPath("/");
+        cookie.setSecure(isProduction);
+        cookie.setMaxAge(value == null ? 0 : 10 * 60 * 60);
+
+        return cookie;
+    }
+
+    public static String getSameSiteValue() {
+        return "prod".equals(System.getenv("PROFILES_ACTIVE")) ? "None" : "Lax";
+    }
 }

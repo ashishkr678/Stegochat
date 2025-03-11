@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -31,19 +31,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
-        Cookie[] cookies = request.getCookies();
-        String jwt = null;
+        String jwt = CookieUtil.extractJwtFromCookie(request);
 
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals("jwt")) {
-                    jwt = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (jwt != null) {
+        if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 Claims claims = jwtUtil.validateToken(jwt);
                 String username = claims.getSubject();
@@ -56,6 +46,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
+            } catch (ExpiredJwtException e) {
+                request.getSession().invalidate();
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Session expired. Please log in again.");
+                return;
             } catch (JwtException e) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired JWT token");
                 return;

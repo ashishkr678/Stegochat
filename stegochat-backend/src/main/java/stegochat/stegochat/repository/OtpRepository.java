@@ -7,8 +7,7 @@ import java.util.Optional;
 public interface OtpRepository extends MongoRepository<OtpEntity, String> {
     
     Optional<OtpEntity> findByEmailAndType(String email, String type);
-    
-    Optional<OtpEntity> findByOtpAndType(String otp, String type);
-    
-    void deleteByEmailAndType(String email, String type); // ✅ Added deletion method
+        
+    void deleteByEmailAndType(String email, String type);
+
 }

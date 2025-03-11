@@ -13,7 +13,7 @@ public interface UserService {
 
     UserDTO completeRegistration(String email, String otp);
 
-    void loginUser(String username, String password, HttpServletRequest request, HttpServletResponse response);
+    UserDTO loginUser(String username, String password, HttpServletRequest request, HttpServletResponse response);
 
     UserDTO getUserProfile(HttpServletRequest request);
 
@@ -23,6 +23,10 @@ public interface UserService {
 
     void updatePhoneNumber(HttpServletRequest request, String newPhoneNumber);
 
-    void logout(String username, HttpServletRequest request, HttpServletResponse response);
+    void initiateEmailUpdate(HttpServletRequest request, String newEmail);
+
+    void verifyEmailUpdate(HttpServletRequest request, int otp); 
+
+    void logout(HttpServletRequest request, HttpServletResponse response);
     
 }

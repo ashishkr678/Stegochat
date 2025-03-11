@@ -27,24 +27,21 @@ public class EmailOtpServiceImpl implements EmailOtpService {
 
     @Override
     public synchronized void sendOtp(String email, String type) {
-        // Generate a 6-digit OTP (ensuring it doesn’t start with zero)
+
         String otp = String.valueOf(100000 + RANDOM.nextInt(900000));
 
-        // ✅ Hash OTP before storing it in the database
         String hashedOtp = passwordEncoder.encode(otp);
 
         OtpEntity otpData = OtpEntity.builder()
                 .email(email)
-                .otp(hashedOtp) // ✅ Store hashed OTP
+                .otp(hashedOtp)
                 .type(type)
                 .createdAt(LocalDateTime.now())
                 .verified(false)
                 .build();
 
-        // Save OTP to the database
         otpRepository.save(otpData);
 
-        // Send OTP via email
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("Your OTP Code");
@@ -62,18 +59,15 @@ public class EmailOtpServiceImpl implements EmailOtpService {
 
         OtpEntity otpData = otpDataOpt.get();
 
-        // ✅ Check if the OTP is expired
         if (otpData.isExpired()) {
             otpRepository.delete(otpData);
             throw new BadRequestException("OTP expired. Please request a new one.");
         }
 
-        // ✅ Verify hashed OTP using `BCryptPasswordEncoder.matches()`
         if (!passwordEncoder.matches(otp, otpData.getOtp())) {
             throw new BadRequestException("Incorrect OTP. Please try again.");
         }
 
-        // ✅ Mark OTP as verified
         otpData.setVerified(true);
         otpRepository.save(otpData);
     }

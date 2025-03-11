@@ -19,12 +19,15 @@ import stegochat.stegochat.repository.OtpRepository;
 import stegochat.stegochat.repository.PendingRegistrationRepository;
 import stegochat.stegochat.repository.UserRepository;
 import stegochat.stegochat.security.CookieUtil;
+import stegochat.stegochat.security.EncryptionUtil;
 import stegochat.stegochat.security.JwtUtil;
 import stegochat.stegochat.service.EmailOtpService;
 import stegochat.stegochat.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +51,6 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Invalid user data. Email and username are required.");
         }
 
-        // Check if email or username is already registered
         if (userRepository.existsByEmail(userDTO.getEmail())
                 || pendingRegistrationRepository.findByEmail(userDTO.getEmail()).isPresent()) {
             throw new EmailAlreadyExistsException("Email is already registered or pending verification.");
@@ -57,21 +59,19 @@ public class UserServiceImpl implements UserService {
             throw new UsernameAlreadyExistsException("Username is already taken.");
         }
 
-        // Hash the password before storing
         String hashedPassword = passwordEncoder.encode(userDTO.getPassword());
 
-        // Store user in pending registration
         PendingRegistrationEntity pendingUser = PendingRegistrationEntity.builder()
                 .email(userDTO.getEmail())
                 .username(userDTO.getUsername())
                 .firstName(userDTO.getFirstName())
                 .lastName(userDTO.getLastName())
                 .phone(userDTO.getPhone())
-                .password(hashedPassword) // Storing hashed password
+                .password(hashedPassword)
                 .profilePicture(userDTO.getProfilePicture())
                 .about(userDTO.getAbout())
                 .dateOfBirth(userDTO.getDateOfBirth())
-                .createdAt(LocalDateTime.now()) // Timestamp
+                .createdAt(LocalDateTime.now())
                 .build();
 
         pendingRegistrationRepository.save(pendingUser);
@@ -82,8 +82,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserDTO completeRegistration(String email, String otp) { // ✅ Email is now passed from frontend
-        // ✅ Step 1: Find OTP entry using email
+    public UserDTO completeRegistration(String email, String otp) {
         Optional<OtpEntity> otpEntityOpt = otpRepository.findByEmailAndType(email, "REGISTER");
 
         if (otpEntityOpt.isEmpty()) {
@@ -92,18 +91,15 @@ public class UserServiceImpl implements UserService {
 
         OtpEntity otpEntity = otpEntityOpt.get();
 
-        // ✅ Step 2: Verify if the OTP is expired
         if (otpEntity.isExpired()) {
             otpRepository.delete(otpEntity);
             throw new BadRequestException("OTP expired. Please request a new one.");
         }
 
-        // ✅ Step 3: Compare user-entered OTP with stored hashed OTP
         if (!passwordEncoder.matches(otp, otpEntity.getOtp())) {
             throw new BadRequestException("Incorrect OTP. Please try again.");
         }
 
-        // ✅ Step 4: Find the pending registration data using email
         Optional<PendingRegistrationEntity> pendingUserOpt = pendingRegistrationRepository.findByEmail(email);
 
         if (pendingUserOpt.isEmpty()) {
@@ -112,28 +108,30 @@ public class UserServiceImpl implements UserService {
 
         PendingRegistrationEntity pendingUser = pendingUserOpt.get();
 
-        // ✅ Step 5: Convert PendingRegistrationEntity to UsersEntity
         UsersEntity newUser = UserMapper.toEntity(pendingUser);
         newUser.setCreatedAt(LocalDateTime.now());
 
-        // ✅ Step 6: Add metadata (Hidden in DTO)
+        // ✅ Step 1: Generate a base encryption key for this user
+        String baseEncryptionKey = EncryptionUtil.generateBaseEncryptionKey();
+
+        // ✅ Step 2: Store the base key in `encryptionKeys`
+        newUser.getEncryptionKeys().put("baseKey", baseEncryptionKey);
+
         newUser.setMetadata(Map.of(
                 "createdAt", LocalDateTime.now(),
                 "accountStatus", "ACTIVE"));
 
-        // ✅ Step 7: Save the new user
         userRepository.save(newUser);
 
-        // ✅ Step 8: Cleanup - Remove OTP & Pending Registration
         pendingRegistrationRepository.deleteByEmail(email);
         otpRepository.deleteByEmailAndType(email, "REGISTER");
 
-        // ✅ Step 9: Return UserDTO (Excluding metadata & password)
         return UserMapper.toDTO(newUser);
     }
 
     @Override
-    public void loginUser(String username, String password, HttpServletRequest request, HttpServletResponse response) {
+    public UserDTO loginUser(String username, String password, HttpServletRequest request,
+            HttpServletResponse response) {
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UnauthorizedException("Invalid username or password."));
 
@@ -144,30 +142,48 @@ public class UserServiceImpl implements UserService {
         if (user.getMetadata() == null) {
             user.setMetadata(new HashMap<>());
         }
-
         user.getMetadata().put("lastLogin", LocalDateTime.now());
-        user.getMetadata().put("lastLoginIP", request.getRemoteAddr()); // Store IP Address
-        user.getMetadata().put("lastLoginDevice", request.getHeader("User-Agent")); // Store Device Info
+        user.getMetadata().put("lastLoginIP", request.getRemoteAddr());
+        user.getMetadata().put("lastLoginDevice", request.getHeader("User-Agent"));
 
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getUsername());
 
-        Cookie jwtCookie = createCookie("jwt", token, true);
-        Cookie usernameCookie = createCookie("username", user.getUsername(), false);
+        Cookie jwtCookie = CookieUtil.createCookie("jwt", token, true);
+        Cookie usernameCookie = CookieUtil.createCookie("username", user.getUsername(), false);
 
-        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, getSameSiteValue()));
-        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(usernameCookie, getSameSiteValue()));
+        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, CookieUtil.getSameSiteValue()));
+        response.addHeader("Set-Cookie",
+                CookieUtil.createCookieWithSameSite(usernameCookie, CookieUtil.getSameSiteValue()));
+
+        UserDTO userDTO = UserMapper.toDTO(user);
+
+        HttpSession session = request.getSession();
+        session.setAttribute("userProfile", userDTO);
+
+        return userDTO;
     }
 
     @Override
     public UserDTO getUserProfile(HttpServletRequest request) {
-        String username = CookieUtil.extractUsernameFromCookie(request);
+        HttpSession session = request.getSession(false);
 
+        if (session != null && session.getAttribute("userProfile") != null) {
+            return (UserDTO) session.getAttribute("userProfile");
+        }
+
+        String username = CookieUtil.extractUsernameFromCookie(request);
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        return UserMapper.toDTO(user);
+        UserDTO userDTO = UserMapper.toDTO(user);
+
+        if (session != null) {
+            session.setAttribute("userProfile", userDTO);
+        }
+
+        return userDTO;
     }
 
     @Override
@@ -208,43 +224,73 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void logout(String username, HttpServletRequest request, HttpServletResponse response) {
+    public void initiateEmailUpdate(HttpServletRequest request, String newEmail) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        if (userRepository.existsByEmail(newEmail)) {
+            throw new BadRequestException("This email is already registered.");
+        }
+
+        Optional<UsersEntity> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            throw new BadRequestException("User not found.");
+        }
+
+        emailOtpService.sendOtp(newEmail, "EMAIL_UPDATE");
+    }
+
+    @Override
+    public void verifyEmailUpdate(HttpServletRequest request, int otp) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        String otpString = String.valueOf(otp);
+
+        Optional<UsersEntity> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            throw new BadRequestException("User not found.");
+        }
+
+        UsersEntity user = userOpt.get();
+        String newEmail = user.getEmail();
+
+        emailOtpService.verifyOtp(newEmail, otpString, "EMAIL_UPDATE");
+
+        user.setEmail(newEmail);
+        userRepository.save(user);
+
+        otpRepository.deleteByEmailAndType(newEmail, "EMAIL_UPDATE");
+    }
+
+    @Override
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        if (username == null) {
+            throw new UnauthorizedException("User not logged in.");
+        }
+
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UnauthorizedException("User not found."));
 
         if (user.getMetadata() == null) {
             user.setMetadata(new HashMap<>());
         }
-
-        // ✅ Store the last logout time
         user.getMetadata().put("lastLogout", LocalDateTime.now());
+        userRepository.save(user);
 
-        userRepository.save(user); // Save updated metadata
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
 
-        // ✅ Clear authentication cookies
-        Cookie jwtCookie = createCookie("jwt", "", true);
-        jwtCookie.setMaxAge(0); // Expire immediately
+        Cookie jwtCookie = CookieUtil.createCookie("jwt", "", true);
+        jwtCookie.setMaxAge(0);
 
-        Cookie usernameCookie = createCookie("username", "", false);
-        usernameCookie.setMaxAge(0); // Expire immediately
+        Cookie usernameCookie = CookieUtil.createCookie("username", "", false);
+        usernameCookie.setMaxAge(0);
 
-        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, getSameSiteValue()));
-        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(usernameCookie, getSameSiteValue()));
+        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, "Strict"));
+        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(usernameCookie, "Strict"));
     }
 
-    private Cookie createCookie(String name, String value, boolean httpOnly) {
-        boolean isProduction = "prod".equals(System.getenv("PROFILES_ACTIVE"));
-
-        Cookie cookie = new Cookie(name, value);
-        cookie.setHttpOnly(httpOnly);
-        cookie.setPath("/");
-        cookie.setSecure(isProduction);
-        cookie.setMaxAge(value == null ? 0 : 10 * 60 * 60);
-
-        return cookie;
-    }
-
-    private String getSameSiteValue() {
-        return "prod".equals(System.getenv("PROFILES_ACTIVE")) ? "None" : "Lax";
-    }
 }

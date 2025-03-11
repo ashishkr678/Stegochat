@@ -1,36 +1,27 @@
 package stegochat.stegochat.entity;
 
-import java.time.LocalDateTime;
-
+import java.util.Date;
+import java.time.Instant;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Document(collection = "otps")
+@Document(collection = "pending_password_resets")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OtpEntity {
+public class PendingPasswordResetEntity {
+
     @Id
     private String email;
-    
-    private String otp;
-    private String type;
 
     @Indexed(expireAfterSeconds = 900)
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Date createdAt;
 
-    @Builder.Default
-    private boolean verified = false;
-
-    public boolean isExpired() {
-        return createdAt.plusMinutes(15).isBefore(LocalDateTime.now());
-    }
+    private boolean verified;
 }

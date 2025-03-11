@@ -24,13 +24,14 @@ import stegochat.stegochat.entity.records.MessageStatusRecord;
 @AllArgsConstructor
 @Builder
 public class MessagesEntity extends BaseEntity {
+
     @Id
     private String id;
     
     private String senderUsername;
     private String receiverUsername;
     private MessageType messageType;
-    private String content;  // Encrypted message text
+    private String content;
 
     private boolean isEdited;
     private boolean isSoftDeleted;

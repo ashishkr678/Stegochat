@@ -41,6 +41,9 @@ public class UsersEntity extends BaseEntity {
     private LocalDate dateOfBirth;
 
     @Builder.Default
+    private Map<String, String> encryptionKeys = new HashMap<>();
+
+    @Builder.Default
     private Set<String> friends = new HashSet<>();
 
     @Builder.Default
@@ -52,4 +55,5 @@ public class UsersEntity extends BaseEntity {
     // ✅ Metadata for Enterprise Analytics (e.g., last login, device info)
     @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
+    
 }

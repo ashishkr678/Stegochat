@@ -28,7 +28,6 @@ public class UserController {
 
     private final UserService userService;
 
-    // Step 1: Register User and Send OTP
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserDTO userDTO) {
         userService.initiateRegistration(userDTO);
@@ -38,7 +37,7 @@ public class UserController {
     @PostMapping("/register/verify-otp")
     public ResponseEntity<UserDTO> verifyOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        String otp = request.get("otp"); // Extract OTP from request body
+        String otp = request.get("otp");
         if (otp == null || otp.isEmpty()) {
             throw new BadRequestException("OTP is required.");
         }
@@ -49,8 +48,8 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody UserDTO userDTO, HttpServletRequest request,
             HttpServletResponse response) {
-        userService.loginUser(userDTO.getUsername(), userDTO.getPassword(), request, response);
-        return ResponseEntity.ok(Map.of("message", "Login successful."));
+        UserDTO userProfile = userService.loginUser(userDTO.getUsername(), userDTO.getPassword(), request, response);
+        return ResponseEntity.ok(userProfile);
     }
 
     @GetMapping("/profile")
@@ -96,14 +95,7 @@ public class UserController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
-        String username = CookieUtil.extractUsernameFromCookie(request);
-
-        if (username == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not logged in."));
-        }
-
-        userService.logout(username, request, response);
-
+        userService.logout(request, response);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
     }
 
