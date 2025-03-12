@@ -20,6 +20,7 @@ import stegochat.stegochat.security.EncryptionUtil;
 import stegochat.stegochat.service.FriendService;
 import stegochat.stegochat.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +34,7 @@ public class FriendServiceImpl implements FriendService {
     private final MongoTemplate mongoTemplate;
     private final NotificationService notificationService;
 
-    // ✅ Send Friend Request & Trigger Notification
+    // Send Friend Request
     @Override
     @Transactional
     public void sendFriendRequest(HttpServletRequest request, String receiverUsername) {
@@ -43,66 +44,55 @@ public class FriendServiceImpl implements FriendService {
             throw new BadRequestException("You cannot send a friend request to yourself.");
         }
 
-        if (userRepository.existsByUsernameAndFriendsContaining(senderUsername, receiverUsername)) {
+        UsersEntity sender = userRepository.findByUsername(senderUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found."));
+
+        if (sender.getFriends().contains(receiverUsername)) {
             throw new BadRequestException("You are already friends.");
         }
-
-        List<UsersEntity> sentRequests = userRepository.findBySentRequestsContaining(senderUsername);
-        if (sentRequests.stream().anyMatch(user -> user.getUsername().equals(receiverUsername))) {
+        if (sender.getSentRequests().contains(receiverUsername)) {
             throw new BadRequestException("Friend request already sent.");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        // ✅ Bulk Update for efficiency
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
-
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(senderUsername)),
                 new Update()
                         .addToSet("sentRequests", receiverUsername)
-                        .set("metadata.friendRequestsSent." + receiverUsername, now.toString()));
+                        .set("metadata.friendRequestsSent." + receiverUsername, now));
 
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(receiverUsername)),
                 new Update()
                         .addToSet("receivedRequests", senderUsername)
-                        .set("metadata.friendRequestsReceived." + senderUsername, now.toString()));
+                        .set("metadata.friendRequestsReceived." + senderUsername, now));
 
         bulkOps.execute();
 
-        // ✅ Create & Send Real-Time Notification
-        notificationService.createNotification(receiverUsername, "New friend request from " + senderUsername,
-                NotificationType.FRIEND_REQUEST, senderUsername);
+        notificationService.createNotification(receiverUsername,
+                "New friend request from " + senderUsername, NotificationType.FRIEND_REQUEST, senderUsername);
     }
 
-    // ✅ Accept Friend Request & Trigger Notification
+    // Accept Friend Request
     @Override
     @Transactional
     public void acceptFriendRequest(HttpServletRequest request, String senderUsername) {
         String receiverUsername = CookieUtil.extractUsernameFromCookie(request);
 
-        List<UsersEntity> receivedRequests = userRepository.findByReceivedRequestsContaining(receiverUsername);
-        if (receivedRequests.stream().noneMatch(user -> user.getUsername().equals(senderUsername))) {
+        UsersEntity receiver = userRepository.findByUsername(receiverUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
+
+        if (!receiver.getReceivedRequests().contains(senderUsername)) {
             throw new BadRequestException("No friend request found from this user.");
         }
 
-        // ✅ Generate Encryption Keys
-        String senderKey = EncryptionUtil.generateFriendEncryptionKey(senderUsername, receiverUsername);
         String receiverKey = EncryptionUtil.generateFriendEncryptionKey(receiverUsername, senderUsername);
 
         LocalDateTime now = LocalDateTime.now();
 
-        // ✅ Bulk Update
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
-
-        bulkOps.updateOne(
-                Query.query(Criteria.where("username").is(senderUsername)),
-                new Update()
-                        .addToSet("friends", receiverUsername)
-                        .pull("sentRequests", receiverUsername)
-                        .set("encryptionKeys." + receiverUsername, senderKey)
-                        .set("metadata.friendRequestsAccepted." + receiverUsername, now.toString()));
 
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(receiverUsername)),
@@ -110,60 +100,60 @@ public class FriendServiceImpl implements FriendService {
                         .addToSet("friends", senderUsername)
                         .pull("receivedRequests", senderUsername)
                         .set("encryptionKeys." + senderUsername, receiverKey)
-                        .set("metadata.friendRequestsAccepted." + senderUsername, now.toString()));
+                        .set("metadata.friendRequestsAccepted." + senderUsername, now));
 
         bulkOps.execute();
 
-        // ✅ Create & Send Real-Time Notification
-        notificationService.createNotification(senderUsername, receiverUsername + " accepted your friend request!",
-                NotificationType.FRIEND_REQUEST_ACCEPTED, receiverUsername);
+        notificationService.createNotification(senderUsername,
+                receiverUsername + " accepted your friend request!", NotificationType.FRIEND_REQUEST_ACCEPTED,
+                receiverUsername);
     }
 
-    // ✅ Reject Friend Request
+    // Reject Friend Request
     @Override
     @Transactional
     public void rejectFriendRequest(HttpServletRequest request, String senderUsername) {
         String receiverUsername = CookieUtil.extractUsernameFromCookie(request);
 
-        // ✅ Check if request exists
-        List<UsersEntity> receivedRequests = userRepository.findByReceivedRequestsContaining(receiverUsername);
-        if (receivedRequests.stream().noneMatch(user -> user.getUsername().equals(senderUsername))) {
+        UsersEntity receiver = userRepository.findByUsername(receiverUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
+
+        if (!receiver.getReceivedRequests().contains(senderUsername)) {
             throw new BadRequestException("No friend request found from this user.");
         }
 
         LocalDateTime now = LocalDateTime.now();
-
-        // ✅ Bulk Update
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
 
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(senderUsername)),
                 new Update()
                         .pull("sentRequests", receiverUsername)
-                        .set("metadata.friendRequestsRejected." + receiverUsername, now.toString()));
+                        .set("metadata.friendRequestsRejected." + receiverUsername, now));
 
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(receiverUsername)),
                 new Update()
                         .pull("receivedRequests", senderUsername)
-                        .set("metadata.friendRequestsRejected." + senderUsername, now.toString()));
+                        .set("metadata.friendRequestsRejected." + senderUsername, now));
 
         bulkOps.execute();
     }
 
-    // ✅ Remove Friend
+    // Remove Friend
     @Override
     @Transactional
     public void removeFriend(HttpServletRequest request, String friendUsername) {
         String username = CookieUtil.extractUsernameFromCookie(request);
 
-        if (!userRepository.existsByUsernameAndFriendsContaining(username, friendUsername)) {
+        UsersEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (!user.getFriends().contains(friendUsername)) {
             throw new BadRequestException("You are not friends with this user.");
         }
 
         LocalDateTime now = LocalDateTime.now();
-
-        // ✅ Bulk Update
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
 
         bulkOps.updateOne(
@@ -171,41 +161,97 @@ public class FriendServiceImpl implements FriendService {
                 new Update()
                         .pull("friends", friendUsername)
                         .unset("encryptionKeys." + friendUsername)
-                        .set("metadata.friendRemoved." + friendUsername, now.toString()));
+                        .set("metadata.friendRemoved." + friendUsername, now));
 
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(friendUsername)),
                 new Update()
                         .pull("friends", username)
                         .unset("encryptionKeys." + username)
-                        .set("metadata.friendRemoved." + username, now.toString()));
+                        .set("metadata.friendRemoved." + username, now));
 
         bulkOps.execute();
     }
 
-    // ✅ Get Friends List
+    // Get Online Friends
+    @Override
+    public List<UserDTO> getOnlineFriends(HttpServletRequest request) {
+
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        UsersEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        Set<String> friendUsernames = user.getFriends();
+
+        return userRepository.findByUsernameIn(friendUsernames)
+                .stream()
+                .filter(UsersEntity::isOnline)
+                .sorted((u1, u2) -> u1.getUsername().compareToIgnoreCase(u2.getUsername()))
+                .map(UserMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+    
+    // Get Specific online friend
+    @Override
+    public boolean isFriendOnline(HttpServletRequest request, String friendUsername) {
+
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        UsersEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (!user.getFriends().contains(friendUsername)) {
+            throw new BadRequestException("This user is not in your friend list.");
+        }
+
+        UsersEntity friend = userRepository.findByUsername(friendUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Friend not found."));
+
+        return friend.isOnline();
+    }
+
+    // Get Last Seen
+    @Override
+    public LocalDateTime getFriendLastSeen(HttpServletRequest request, String friendUsername) {
+
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        UsersEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (!user.getFriends().contains(friendUsername)) {
+            throw new ResourceNotFoundException("This user is not in your friend list.");
+        }
+
+        return userRepository.findByUsername(friendUsername)
+                .map(UsersEntity::getLastSeen)
+                .orElseThrow(() -> new ResourceNotFoundException("Friend not found."));
+    }
+
+    // Get Friends List (Sorted Alphabetically)
     @Override
     public List<UserDTO> getFriends(HttpServletRequest request) {
         String username = CookieUtil.extractUsernameFromCookie(request);
 
-        Set<String> friendUsernames = userRepository.findByUsername(username)
-                .map(UsersEntity::getFriends)
+        UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        return userRepository.findAllByUsernameIn(friendUsernames)
+        return userRepository.findByUsernameIn(user.getFriends())
                 .stream()
+                .sorted((u1, u2) -> u1.getUsername().compareToIgnoreCase(u2.getUsername()))
                 .map(UserMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
-    // ✅ Get Pending Friend Requests
+    // Get Pending Friend Requests (Sorted by Date)
     @Override
     public List<UserDTO> getPendingFriendRequests(HttpServletRequest request) {
         String username = CookieUtil.extractUsernameFromCookie(request);
 
-        List<UsersEntity> pendingRequests = userRepository.findByReceivedRequestsContaining(username);
-
-        return pendingRequests.stream()
+        return userRepository.findByReceivedRequestsContaining(username)
+                .stream()
+                .sorted((u1, u2) -> u2.getCreatedAt().compareTo(u1.getCreatedAt()))
                 .map(UserMapper::toDTO)
                 .collect(Collectors.toList());
     }

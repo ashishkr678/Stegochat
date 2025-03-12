@@ -1,7 +1,6 @@
 package stegochat.stegochat.security;
 
 import java.io.IOException;
-
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -9,7 +8,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -39,7 +37,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String username = claims.getSubject();
 
                 UserDetails userDetails = User.withUsername(username).password("").authorities("USER").build();
-
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -47,6 +44,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
             } catch (ExpiredJwtException e) {
+                jwtUtil.markUserOffline(e.getClaims().getSubject());
                 request.getSession().invalidate();
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Session expired. Please log in again.");
                 return;
@@ -59,3 +57,5 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 }
+
+

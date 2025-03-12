@@ -3,11 +3,13 @@ package stegochat.stegochat.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import stegochat.stegochat.entity.UsersEntity;
+import stegochat.stegochat.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Component
@@ -15,15 +17,17 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey SECRET_KEY;
+    private final UserRepository userRepository;
 
     @Value("${jwt.expiration-time}")
     private long expirationTime;
 
-    public JwtUtil(@Value("${jwt.secret}") String secretKey) {
+    public JwtUtil(@Value("${jwt.secret}") String secretKey, UserRepository userRepository) {
         if (secretKey == null || secretKey.isEmpty()) {
             throw new IllegalStateException("JWT secret key is missing. Set it in the environment variables.");
         }
         this.SECRET_KEY = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+        this.userRepository = userRepository;
     }
 
     public String generateToken(String username) {
@@ -44,6 +48,7 @@ public class JwtUtil {
                     .getBody();
         } catch (ExpiredJwtException e) {
             log.warn("Token has expired: {}", e.getMessage());
+            markUserOffline(e.getClaims().getSubject());
             throw new JwtException("Token has expired", e);
         } catch (JwtException e) {
             log.warn("Invalid token: {}", e.getMessage());
@@ -51,4 +56,12 @@ public class JwtUtil {
         }
     }
 
+    public void markUserOffline(String username) {
+        UsersEntity user = userRepository.findByUsername(username).orElse(null);
+        if (user != null) {
+            user.setOnline(false);
+            user.setLastSeen(LocalDateTime.now());
+            userRepository.save(user);
+        }
+    }
 }

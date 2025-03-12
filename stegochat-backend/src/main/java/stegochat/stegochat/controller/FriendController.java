@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.service.FriendService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -18,36 +19,55 @@ public class FriendController {
 
     private final FriendService friendService;
 
-    // ✅ Send Friend Request (No need to pass senderUsername, extracted from session)
+    // Send Friend Request
     @PostMapping("/send-request")
     public ResponseEntity<Map<String, String>> sendFriendRequest(HttpServletRequest request,
-                                                                 @RequestParam String receiverUsername) {
+            @RequestParam String receiverUsername) {
         friendService.sendFriendRequest(request, receiverUsername);
         return ResponseEntity.ok(Map.of("message", "Friend request sent successfully."));
     }
 
-    // ✅ Accept Friend Request
+    // Accept Friend Request
     @PostMapping("/accept-request")
     public ResponseEntity<Map<String, String>> acceptFriendRequest(HttpServletRequest request,
-                                                                   @RequestParam String senderUsername) {
+            @RequestParam String senderUsername) {
         friendService.acceptFriendRequest(request, senderUsername);
         return ResponseEntity.ok(Map.of("message", "Friend request accepted."));
     }
 
-    // ✅ Reject Friend Request
+    // Reject Friend Request
     @PostMapping("/reject-request")
     public ResponseEntity<Map<String, String>> rejectFriendRequest(HttpServletRequest request,
-                                                                   @RequestParam String senderUsername) {
+            @RequestParam String senderUsername) {
         friendService.rejectFriendRequest(request, senderUsername);
         return ResponseEntity.ok(Map.of("message", "Friend request rejected."));
     }
 
-    // ✅ Remove Friend
-    @DeleteMapping("/remove")
+    // Remove Friend
+    @DeleteMapping("/remove-friend")
     public ResponseEntity<Map<String, String>> removeFriend(HttpServletRequest request,
-                                                            @RequestParam String friendUsername) {
+            @RequestParam String friendUsername) {
         friendService.removeFriend(request, friendUsername);
         return ResponseEntity.ok(Map.of("message", "Friend removed successfully."));
+    }
+
+    // Get Online Friends
+    @GetMapping("/online")
+    public ResponseEntity<List<UserDTO>> getOnlineFriends(HttpServletRequest request) {
+        return ResponseEntity.ok(friendService.getOnlineFriends(request));
+    }
+
+    // Check if a specific friend is online
+    @GetMapping("/online/{friendUsername}")
+    public ResponseEntity<Boolean> isFriendOnline(HttpServletRequest request, @PathVariable String friendUsername) {
+        return ResponseEntity.ok(friendService.isFriendOnline(request, friendUsername));
+    }
+
+    // ✅ Get last seen of a specific friend
+    @GetMapping("/lastseen/{friendUsername}")
+    public ResponseEntity<LocalDateTime> getFriendLastSeen(HttpServletRequest request,
+            @PathVariable String friendUsername) {
+        return ResponseEntity.ok(friendService.getFriendLastSeen(request, friendUsername));
     }
 
     // ✅ Get Friends List

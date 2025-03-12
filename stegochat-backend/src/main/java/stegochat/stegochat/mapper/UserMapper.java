@@ -1,12 +1,15 @@
 package stegochat.stegochat.mapper;
 
+import java.time.LocalDateTime;
+
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
 
 public class UserMapper {
 
-    // Convert Entity to DTO
     public static UserDTO toDTO(UsersEntity user) {
         return UserDTO.builder()
                 .id(user.getId())
@@ -18,13 +21,14 @@ public class UserMapper {
                 .profilePicture(user.getProfilePicture())
                 .about(user.getAbout())
                 .dateOfBirth(user.getDateOfBirth())
-                .friends(user.getFriends()) // Read-Only
-                .sentRequests(user.getSentRequests()) // Read-Only
-                .receivedRequests(user.getReceivedRequests()) // Read-Only
+                .friends(user.getFriends())
+                .sentRequests(user.getSentRequests())
+                .receivedRequests(user.getReceivedRequests())
+                .online(user.isOnline())
+                .lastSeen(user.getLastSeen()) 
                 .build();
     }
 
-    // Convert DTO to Entity (Exclude Friends & Requests to prevent manual updates)
     public static UsersEntity toEntity(UserDTO dto) {
         return UsersEntity.builder()
                 .id(dto.getId())
@@ -39,7 +43,21 @@ public class UserMapper {
                 .build();
     }
 
-    // ✅ NEW METHOD: Convert PendingRegistrationEntity to UsersEntity
+    public static PendingRegistrationEntity toPendingEntity(UserDTO dto, BCryptPasswordEncoder passwordEncoder) {
+        return PendingRegistrationEntity.builder()
+                .email(dto.getEmail())
+                .username(dto.getUsername())
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
+                .phone(dto.getPhone())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .profilePicture(dto.getProfilePicture())
+                .about(dto.getAbout())
+                .dateOfBirth(dto.getDateOfBirth())
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
     public static UsersEntity toEntity(PendingRegistrationEntity pendingUser) {
         return UsersEntity.builder()
                 .username(pendingUser.getUsername())
@@ -47,10 +65,11 @@ public class UserMapper {
                 .firstName(pendingUser.getFirstName())
                 .lastName(pendingUser.getLastName())
                 .phone(pendingUser.getPhone())
-                .password(pendingUser.getPassword()) // Already hashed
+                .password(pendingUser.getPassword())
                 .profilePicture(pendingUser.getProfilePicture())
                 .about(pendingUser.getAbout())
                 .dateOfBirth(pendingUser.getDateOfBirth())
                 .build();
     }
+
 }

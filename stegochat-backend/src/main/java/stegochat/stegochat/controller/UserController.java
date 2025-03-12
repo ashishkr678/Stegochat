@@ -1,26 +1,18 @@
 package stegochat.stegochat.controller;
 
-import java.util.Map;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import stegochat.stegochat.dto.LoginDTO;
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.entity.enums.OtpType;
 import stegochat.stegochat.exception.BadRequestException;
-import stegochat.stegochat.security.CookieUtil;
 import stegochat.stegochat.service.UserService;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -29,71 +21,80 @@ public class UserController {
 
     private final UserService userService;
 
+    // ✅ Initiate Registration
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserDTO userDTO) {
         userService.initiateRegistration(userDTO);
         return ResponseEntity.ok(Map.of("message", "Registration initiated. OTP sent to " + userDTO.getEmail()));
     }
 
+    // ✅ Verify Registration OTP
     @PostMapping("/register/verify-otp")
     public ResponseEntity<UserDTO> verifyOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String otp = request.get("otp");
+
+        if (email == null || email.isEmpty()) {
+            throw new BadRequestException("Email is required.");
+        }
         if (otp == null || otp.isEmpty()) {
             throw new BadRequestException("OTP is required.");
         }
-        UserDTO verifiedUser = userService.completeRegistration(email, otp);
-        return ResponseEntity.ok(verifiedUser);
+
+        return ResponseEntity.ok(userService.completeRegistration(email, otp));
     }
 
+    // ✅ Login
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody UserDTO userDTO, HttpServletRequest request,
-            HttpServletResponse response) {
-        UserDTO userProfile = userService.loginUser(userDTO.getUsername(), userDTO.getPassword(), request, response);
-        return ResponseEntity.ok(userProfile);
+    public ResponseEntity<Map<String, Object>> loginUser(@RequestBody LoginDTO loginDTO,
+                                                         HttpServletRequest request,
+                                                         HttpServletResponse response) {
+        UserDTO userProfile = userService.loginUser(loginDTO.getUsername(), loginDTO.getPassword(), request, response);
+        return ResponseEntity.ok(Map.of("message", "Login successful", "user", userProfile));
     }
 
+    // ✅ Get User Profile
     @GetMapping("/profile")
-    public ResponseEntity<?> getUserProfile(HttpServletRequest request) {
-        return ResponseEntity.ok(userService.getUserProfile(request));
+    public ResponseEntity<Map<String, Object>> getUserProfile(HttpServletRequest request) {
+        return ResponseEntity.ok(Map.of("user", userService.getUserProfile(request)));
     }
 
+    // ✅ Get User by Username
     @GetMapping("/user/{username}")
-    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
-        return ResponseEntity.ok(userService.getUserByUsername(username));
+    public ResponseEntity<Map<String, Object>> getUserByUsername(@PathVariable String username) {
+        return ResponseEntity.ok(Map.of("user", userService.getUserByUsername(username)));
     }
 
+    // ✅ Change Password
     @PutMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request,
-            HttpServletRequest httpServletRequest) {
+    public ResponseEntity<Map<String, String>> changePassword(@RequestBody Map<String, String> request,
+                                                              HttpServletRequest httpServletRequest) {
         String currentPassword = request.get("currentPassword");
         String newPassword = request.get("newPassword");
 
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Bad Request",
-                    "message", "New password cannot be empty!"));
+            throw new BadRequestException("New password cannot be empty!");
         }
 
         userService.changePassword(httpServletRequest, currentPassword, newPassword);
         return ResponseEntity.ok(Map.of("message", "Password changed successfully."));
     }
 
+    // ✅ Update Phone Number
     @PutMapping("/update-phone")
-    public ResponseEntity<?> updatePhoneNumber(@RequestBody Map<String, String> request,
-            HttpServletRequest httpServletRequest) {
+    public ResponseEntity<Map<String, String>> updatePhoneNumber(@RequestBody Map<String, String> request,
+                                                                 HttpServletRequest httpServletRequest) {
         String newPhoneNumber = request.get("newPhoneNumber");
 
         if (newPhoneNumber == null || newPhoneNumber.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Bad Request",
-                    "message", "New phone number cannot be empty!"));
+            throw new BadRequestException("New phone number cannot be empty!");
         }
 
         userService.updatePhoneNumber(httpServletRequest, newPhoneNumber);
         return ResponseEntity.ok(Map.of("message", "Phone number updated successfully."));
     }
 
+    // ✅ Resend OTP
     @PostMapping("/resend-otp")
     public ResponseEntity<Map<String, String>> resendOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -112,10 +113,10 @@ public class UserController {
         }
     }
 
+    // ✅ Logout
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request, HttpServletResponse response) {
         userService.logout(request, response);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
     }
-
 }

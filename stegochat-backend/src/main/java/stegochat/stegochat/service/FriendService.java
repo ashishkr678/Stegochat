@@ -1,27 +1,29 @@
 package stegochat.stegochat.service;
 
-import stegochat.stegochat.dto.UserDTO;
-import java.util.List;
-
 import jakarta.servlet.http.HttpServletRequest;
+import stegochat.stegochat.dto.UserDTO;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 public interface FriendService {
 
-    // ✅ Send a friend request
     void sendFriendRequest(HttpServletRequest request, String receiverUsername);
-
-    // ✅ Accept a friend request
+    
     void acceptFriendRequest(HttpServletRequest request, String senderUsername);
+    
+    void rejectFriendRequest(HttpServletRequest request, String senderUsername);
+    
+    void removeFriend(HttpServletRequest request, String friendUsername);
+    
+    List<UserDTO> getFriends(HttpServletRequest request);
+    
+    List<UserDTO> getPendingFriendRequests(HttpServletRequest request);
 
-    // ✅ Reject a friend request
-    public void rejectFriendRequest(HttpServletRequest request, String senderUsername);
+    List<UserDTO> getOnlineFriends(HttpServletRequest request);
 
-    // ✅ Remove a friend
-    public void removeFriend(HttpServletRequest request, String friendUsername);
+    boolean isFriendOnline(HttpServletRequest request, String friendUsername);
 
-    // ✅ Get a list of friends
-    public List<UserDTO> getFriends(HttpServletRequest request);
+    LocalDateTime getFriendLastSeen(HttpServletRequest request, String friendUsername);
 
-    // ✅ Get all pending friend requests
-    public List<UserDTO> getPendingFriendRequests(HttpServletRequest request);
 }

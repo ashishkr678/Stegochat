@@ -5,7 +5,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import stegochat.stegochat.dto.UserDTO;
-import stegochat.stegochat.entity.OtpEntity;
 import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
 import stegochat.stegochat.entity.enums.OtpType;
@@ -22,7 +21,6 @@ import stegochat.stegochat.service.UserService;
 import jakarta.servlet.http.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -34,10 +32,10 @@ public class UserServiceImpl implements UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailOtpService emailOtpService;
-    private final PendingRegistrationRepository pendingRegistrationRepository;
     private final OtpRepository otpRepository;
+    private final PendingRegistrationRepository pendingRegistrationRepository;
 
-    // ✅ Initiate Registration with OTP
+    // Initiate Registration with OTP
     @Override
     @Transactional
     public void initiateRegistration(UserDTO userDTO) {
@@ -45,35 +43,17 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Invalid user data. Email and username are required.");
         }
 
-        if (userRepository.existsByEmail(userDTO.getEmail())
-                || pendingRegistrationRepository.findByEmail(userDTO.getEmail()).isPresent()) {
-            throw new DuplicateResourceException("Email is already registered or pending verification.");
-        }
-        if (userRepository.existsByUsername(userDTO.getUsername())) {
-            throw new DuplicateResourceException("Username is already taken.");
+        if (userRepository.existsByUsernameOrEmail(userDTO.getUsername(), userDTO.getEmail())) {
+            throw new DuplicateResourceException("Username or Email already exists.");
         }
 
-        String hashedPassword = passwordEncoder.encode(userDTO.getPassword());
-
-        PendingRegistrationEntity pendingUser = PendingRegistrationEntity.builder()
-                .email(userDTO.getEmail())
-                .username(userDTO.getUsername())
-                .firstName(userDTO.getFirstName())
-                .lastName(userDTO.getLastName())
-                .phone(userDTO.getPhone())
-                .password(hashedPassword)
-                .profilePicture(userDTO.getProfilePicture())
-                .about(userDTO.getAbout())
-                .dateOfBirth(userDTO.getDateOfBirth())
-                .createdAt(LocalDateTime.now())
-                .build();
-
+        PendingRegistrationEntity pendingUser = UserMapper.toPendingEntity(userDTO, passwordEncoder);
         pendingRegistrationRepository.save(pendingUser);
 
         emailOtpService.sendOtp(userDTO.getEmail(), OtpType.REGISTRATION);
     }
 
-    // ✅ Complete Registration with OTP Verification
+    // Complete Registration with OTP Verification
     @Override
     @Transactional
     public UserDTO completeRegistration(String email, String otp) {
@@ -87,9 +67,7 @@ public class UserServiceImpl implements UserService {
 
         String baseEncryptionKey = EncryptionUtil.generateBaseEncryptionKey();
         newUser.getEncryptionKeys().put("baseKey", baseEncryptionKey);
-        newUser.setMetadata(Map.of(
-                "createdAt", LocalDateTime.now(),
-                "accountStatus", "ACTIVE"));
+        newUser.setMetadata(Map.of("createdAt", LocalDateTime.now(), "accountStatus", "ACTIVE"));
 
         userRepository.save(newUser);
         pendingRegistrationRepository.deleteByEmail(email);
@@ -98,7 +76,42 @@ public class UserServiceImpl implements UserService {
         return UserMapper.toDTO(newUser);
     }
 
-    // ✅ Initiate Email Update with OTP
+    // User Login & Session Management
+    @Override
+    public UserDTO loginUser(String username, String password, HttpServletRequest request,
+            HttpServletResponse response) {
+        UsersEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AuthenticationException("Invalid username or password."));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AuthenticationException("Invalid username or password.");
+        }
+
+        user.getMetadata().put("lastLogin", LocalDateTime.now());
+        user.getMetadata().put("lastLoginIP", request.getRemoteAddr());
+        user.getMetadata().put("lastLoginDevice", request.getHeader("User-Agent"));
+
+        user.setOnline(true);
+        user.setLastSeen(LocalDateTime.now());
+
+        userRepository.save(user);
+
+        String token = jwtUtil.generateToken(user.getUsername());
+
+        Cookie jwtCookie = CookieUtil.createCookie("jwt", token, true);
+        Cookie usernameCookie = CookieUtil.createCookie("username", user.getUsername(), false);
+
+        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, CookieUtil.getSameSiteValue()));
+        response.addHeader("Set-Cookie",
+                CookieUtil.createCookieWithSameSite(usernameCookie, CookieUtil.getSameSiteValue()));
+
+        UserDTO userDTO = UserMapper.toDTO(user);
+        request.getSession().setAttribute("userProfile", userDTO);
+
+        return userDTO;
+    }
+
+    // Initiate Email Update with OTP
     @Override
     public void initiateEmailUpdate(HttpServletRequest request, String newEmail) {
         String username = CookieUtil.extractUsernameFromCookie(request);
@@ -113,7 +126,7 @@ public class UserServiceImpl implements UserService {
         emailOtpService.sendOtp(newEmail, OtpType.EMAIL_UPDATE);
     }
 
-    // ✅ Verify Email Update with OTP
+    // Verify Email Update with OTP
     @Override
     public void verifyEmailUpdate(HttpServletRequest request, String otp) {
         String username = CookieUtil.extractUsernameFromCookie(request);
@@ -127,53 +140,16 @@ public class UserServiceImpl implements UserService {
         otpRepository.deleteByEmailAndType(user.getEmail(), OtpType.EMAIL_UPDATE);
     }
 
-    // ✅ Resend OTP Dynamically
+    // Resend OTP Dynamically
     @Override
     public void resendOtp(String email, OtpType otpType) {
         emailOtpService.resendOtp(email, otpType);
     }
 
-    // ✅ User Login
-    @Override
-    public UserDTO loginUser(String username, String password, HttpServletRequest request,
-            HttpServletResponse response) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AuthenticationException("Invalid username or password."));
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new AuthenticationException("Invalid username or password.");
-        }
-
-        if (user.getMetadata() == null) {
-            user.setMetadata(new HashMap<>());
-        }
-        user.getMetadata().put("lastLogin", LocalDateTime.now());
-        user.getMetadata().put("lastLoginIP", request.getRemoteAddr());
-        user.getMetadata().put("lastLoginDevice", request.getHeader("User-Agent"));
-
-        userRepository.save(user);
-
-        String token = jwtUtil.generateToken(user.getUsername());
-
-        Cookie jwtCookie = CookieUtil.createCookie("jwt", token, true);
-        Cookie usernameCookie = CookieUtil.createCookie("username", user.getUsername(), false);
-
-        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, CookieUtil.getSameSiteValue()));
-        response.addHeader("Set-Cookie",
-                CookieUtil.createCookieWithSameSite(usernameCookie, CookieUtil.getSameSiteValue()));
-
-        UserDTO userDTO = UserMapper.toDTO(user);
-
-        HttpSession session = request.getSession();
-        session.setAttribute("userProfile", userDTO);
-
-        return userDTO;
-    }
-
+    // Retrieve User Profile
     @Override
     public UserDTO getUserProfile(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-
         if (session != null && session.getAttribute("userProfile") != null) {
             return (UserDTO) session.getAttribute("userProfile");
         }
@@ -182,15 +158,10 @@ public class UserServiceImpl implements UserService {
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        UserDTO userDTO = UserMapper.toDTO(user);
-
-        if (session != null) {
-            session.setAttribute("userProfile", userDTO);
-        }
-
-        return userDTO;
+        return UserMapper.toDTO(user);
     }
 
+    // Fetch User by Username
     @Override
     public Optional<UserDTO> getUserByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -200,6 +171,7 @@ public class UserServiceImpl implements UserService {
                 });
     }
 
+    // Change Password
     @Override
     public void changePassword(HttpServletRequest request, String currentPassword, String newPassword) {
         String username = CookieUtil.extractUsernameFromCookie(request);
@@ -214,6 +186,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    // Update Phone Number
     @Override
     public void updatePhoneNumber(HttpServletRequest request, String newPhoneNumber) {
         String username = CookieUtil.extractUsernameFromCookie(request);
@@ -228,11 +201,10 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    // ✅ User Logout
+    // User Logout
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response) {
         String username = CookieUtil.extractUsernameFromCookie(request);
-
         if (username == null) {
             throw new AuthenticationException("User not logged in.");
         }
@@ -240,10 +212,9 @@ public class UserServiceImpl implements UserService {
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AuthenticationException("User not found."));
 
-        if (user.getMetadata() == null) {
-            user.setMetadata(new HashMap<>());
-        }
         user.getMetadata().put("lastLogout", LocalDateTime.now());
+        user.setOnline(false);
+        user.setLastSeen(LocalDateTime.now());
         userRepository.save(user);
 
         HttpSession session = request.getSession(false);
@@ -253,7 +224,6 @@ public class UserServiceImpl implements UserService {
 
         Cookie jwtCookie = CookieUtil.createCookie("jwt", "", true);
         jwtCookie.setMaxAge(0);
-
         Cookie usernameCookie = CookieUtil.createCookie("username", "", false);
         usernameCookie.setMaxAge(0);
 
