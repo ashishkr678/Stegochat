@@ -39,7 +39,7 @@ public class WebSocketController {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final MongoTemplate mongoTemplate;
-    private final SimpMessagingTemplate messagingTemplate; // ✅ WebSocket Messaging for Notifications
+    private final SimpMessagingTemplate messagingTemplate;
 
     // ✅ Send Message & Trigger Notification
     @MessageMapping("/chat")

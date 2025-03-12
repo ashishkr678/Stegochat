@@ -13,7 +13,7 @@ public interface NotificationRepository extends MongoRepository<NotificationsEnt
 
     List<NotificationsEntity> findByUsernameAndIsRead(String username, boolean isRead);
 
-    void deleteByUsername(String username); // ✅ Bulk delete all notifications for a user
+    void deleteByUsername(String username);
 
-    void deleteById(String id); // ✅ Delete a single notification
+    void deleteById(String id);
 }

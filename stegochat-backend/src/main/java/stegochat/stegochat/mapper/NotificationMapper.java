@@ -14,11 +14,11 @@ public class NotificationMapper {
                 .message(notification.getMessage())
                 .isRead(notification.isRead())
                 .readAt(notification.getReadAt())
-                .createdAt(notification.getCreatedAt()) // ✅ Ensure `createdAt` is included
+                .createdAt(notification.getCreatedAt())
                 .build();
     }
 
-    // ✅ Convert DTO to Entity (Avoids Builder Limitation)
+    // ✅ Convert DTO to Entity
     public static NotificationsEntity toEntity(NotificationDTO dto) {
         NotificationsEntity notification = NotificationsEntity.create(
                 dto.getUsername(),

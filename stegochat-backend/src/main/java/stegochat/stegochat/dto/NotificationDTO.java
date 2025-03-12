@@ -16,5 +16,5 @@ public class NotificationDTO {
     private String message;
     private boolean isRead;
     private LocalDateTime readAt;
-    private LocalDateTime createdAt;  // ✅ Include creation timestamp for sorting
+    private LocalDateTime createdAt;
 }
