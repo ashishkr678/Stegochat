@@ -43,7 +43,8 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Invalid user data. Email and username are required.");
         }
 
-        if (userRepository.existsByUsernameOrEmail(userDTO.getUsername(), userDTO.getEmail())) {
+        Boolean exists = userRepository.existsByUsernameOrEmail(userDTO.getUsername(), userDTO.getEmail());
+        if (Boolean.TRUE.equals(exists)) {
             throw new DuplicateResourceException("Username or Email already exists.");
         }
 
@@ -120,8 +121,12 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("This email is already registered.");
         }
 
-        userRepository.findByUsername(username)
+        UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("User not found."));
+
+        // ✅ Store the pending email in metadata
+        user.getMetadata().put("pendingEmail", newEmail);
+        userRepository.save(user);
 
         emailOtpService.sendOtp(newEmail, OtpType.EMAIL_UPDATE);
     }
@@ -134,10 +139,25 @@ public class UserServiceImpl implements UserService {
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("User not found."));
 
-        emailOtpService.verifyOtp(user.getEmail(), otp, OtpType.EMAIL_UPDATE);
+        String newEmail = (String) user.getMetadata().get("pendingEmail");
+        if (newEmail == null) {
+            throw new BadRequestException("No email update request found.");
+        }
 
+        emailOtpService.verifyOtp(newEmail, otp, OtpType.EMAIL_UPDATE);
+
+        user.setEmail(newEmail);
+        user.getMetadata().remove("pendingEmail");
         userRepository.save(user);
-        otpRepository.deleteByEmailAndType(user.getEmail(), OtpType.EMAIL_UPDATE);
+
+        otpRepository.deleteByEmailAndType(newEmail, OtpType.EMAIL_UPDATE);
+
+        UserDTO updatedUserDTO = UserMapper.toDTO(user);
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.setAttribute("userProfile", updatedUserDTO);
+        }
+        
     }
 
     // Resend OTP Dynamically
@@ -199,6 +219,13 @@ public class UserServiceImpl implements UserService {
 
         user.setPhone(newPhoneNumber);
         userRepository.save(user);
+
+        UserDTO updatedUserDTO = UserMapper.toDTO(user);
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.setAttribute("userProfile", updatedUserDTO);
+        }
+
     }
 
     // User Logout

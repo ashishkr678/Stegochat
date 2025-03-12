@@ -10,14 +10,14 @@ import stegochat.stegochat.service.UserService;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/user/email")
 @RequiredArgsConstructor
 public class UserEmailUpdateController {
 
     private final UserService userService;
 
-    // ✅ Initiate Email Update
-    @PostMapping("/update-email")
+    // Initiate Email Update
+    @PostMapping("/update")
     public ResponseEntity<Map<String, String>> updateEmail(HttpServletRequest request,
                                                            @RequestBody Map<String, String> body) {
         String newEmail = body.get("newEmail");
@@ -30,8 +30,8 @@ public class UserEmailUpdateController {
         return ResponseEntity.ok(Map.of("message", "OTP sent to " + newEmail));
     }
 
-    // ✅ Verify Email Update
-    @PostMapping("/verify-email-update")
+    // Verify Email Update
+    @PostMapping("/verify-otp")
     public ResponseEntity<Map<String, String>> verifyEmailUpdate(HttpServletRequest request,
                                                                  @RequestBody Map<String, Object> body) {
         Object otpObj = body.get("otp");

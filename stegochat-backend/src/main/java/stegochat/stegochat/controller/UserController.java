@@ -21,7 +21,7 @@ public class UserController {
 
     private final UserService userService;
 
-    // ✅ Initiate Registration
+    // Initiate Registration
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserDTO userDTO) {
         userService.initiateRegistration(userDTO);

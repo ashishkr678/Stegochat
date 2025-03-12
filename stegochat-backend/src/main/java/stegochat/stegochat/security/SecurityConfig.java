@@ -36,7 +36,9 @@ public class SecurityConfig {
                         "api/users/register/verify-otp",
                         "/api/users/login",
                         "/api/users/logout",
-                        "/api/users/forgot-password/**")
+                        "/api/users/forgot-password/send-otp",
+                        "/api/users/forgot-password/verify-otp",
+                        "/api/users/forgot-password/reset")
                 .permitAll()
                 .anyRequest().authenticated()
                 .and()

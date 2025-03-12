@@ -38,7 +38,6 @@ public class EmailOtpServiceImpl implements EmailOtpService {
         String otp = String.valueOf(100000 + RANDOM.nextInt(900000));
         String hashedOtp = passwordEncoder.encode(otp);
 
-        // Clear previous OTP of the same type
         otpRepository.deleteByEmailAndType(email, type);
 
         OtpEntity otpData = OtpEntity.builder()

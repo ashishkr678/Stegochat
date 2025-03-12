@@ -4,8 +4,8 @@ public interface ForgotPasswordService {
 
     void sendOtpForPasswordReset(String email);
     
-    void verifyOtpForPasswordReset(String otp);
+    void verifyOtpForPasswordReset(String username, String otp);
 
-    void resetPassword(String newPassword);
+    void resetPassword(String username, String newPassword);
 
 }
