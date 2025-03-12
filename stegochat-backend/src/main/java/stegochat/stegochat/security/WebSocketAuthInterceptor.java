@@ -60,3 +60,4 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
         }
     }
 }
+

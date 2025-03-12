@@ -1,8 +1,9 @@
 package stegochat.stegochat.security;
 
+import java.util.Arrays;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Arrays;
 
 public class CookieUtil {
 

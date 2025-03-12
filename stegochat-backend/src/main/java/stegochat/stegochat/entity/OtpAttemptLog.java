@@ -1,9 +1,14 @@
 package stegochat.stegochat.entity;
 
 import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import lombok.*;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import stegochat.stegochat.entity.enums.OtpType;
 
 @Document(collection = "otp_attempts")
@@ -12,6 +17,7 @@ import stegochat.stegochat.entity.enums.OtpType;
 @AllArgsConstructor
 @Builder
 public class OtpAttemptLog {
+    
     @Id
     private String id;
 
