@@ -27,13 +27,13 @@ public class ForgotPasswordController {
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<Map<String, String>> verifyOtp(@RequestBody Map<String, Integer> request) {
-        Integer otp = request.get("otp");
-
-        if (otp == null) {
+    public ResponseEntity<Map<String, String>> verifyOtp(@RequestBody Map<String, Object> request) {
+        Object otpObj = request.get("otp");
+        if (otpObj == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "OTP is required."));
         }
 
+        String otp = String.valueOf(otpObj); // ✅ Convert OTP to String
         forgotPasswordService.verifyOtpForPasswordReset(otp);
         return ResponseEntity.ok(Map.of("message", "OTP verified successfully."));
     }

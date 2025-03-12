@@ -26,7 +26,6 @@ public class JwtUtil {
         this.SECRET_KEY = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Generate JWT Token
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
@@ -36,7 +35,6 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Validate JWT Token
     public Claims validateToken(String token) {
         try {
             return Jwts.parserBuilder()

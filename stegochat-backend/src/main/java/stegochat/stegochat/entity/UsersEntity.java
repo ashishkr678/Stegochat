@@ -56,7 +56,6 @@ public class UsersEntity extends BaseEntity {
     @Builder.Default
     private Set<String> receivedRequests = new HashSet<>();
 
-    // ✅ Metadata for Enterprise Analytics (e.g., last login, device info)
     @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
     

@@ -2,17 +2,23 @@ package stegochat.stegochat.security;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
+import javax.crypto.Mac;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 import java.util.Base64;
 
 public class EncryptionUtil {
 
-    // ✅ Generate a secure base encryption key (for new users)
+    private static final int AES_KEY_SIZE = 256;
+    private static final int GCM_IV_LENGTH = 12;
+    private static final int GCM_TAG_LENGTH = 128;
+
     public static String generateBaseEncryptionKey() {
         try {
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-            keyGenerator.init(256);
+            keyGenerator.init(AES_KEY_SIZE);
             SecretKey secretKey = keyGenerator.generateKey();
             return Base64.getEncoder().encodeToString(secretKey.getEncoded());
         } catch (Exception e) {
@@ -20,46 +26,60 @@ public class EncryptionUtil {
         }
     }
 
-    // ✅ Generate a unique key for each friend
     public static String generateFriendEncryptionKey(String baseKey, String friendUsername) {
         try {
-            SecureRandom secureRandom = new SecureRandom((baseKey + friendUsername).getBytes());
-            KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-            keyGenerator.init(256, secureRandom);
-            SecretKey friendKey = keyGenerator.generateKey();
-            return Base64.getEncoder().encodeToString(friendKey.getEncoded());
+            Mac hmacSHA256 = Mac.getInstance("HmacSHA256");
+            hmacSHA256.init(new SecretKeySpec(baseKey.getBytes(), "HmacSHA256"));
+            byte[] derivedKey = hmacSHA256.doFinal(friendUsername.getBytes());
+            return Base64.getEncoder().encodeToString(derivedKey);
         } catch (Exception e) {
             throw new RuntimeException("Error generating friend encryption key", e);
         }
     }
 
-    // ✅ Encrypt message
     public static String encrypt(String data, String encryptionKey) {
         try {
-            Cipher cipher = Cipher.getInstance("AES");
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             SecretKey key = getKeyFromBase64(encryptionKey);
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-            return Base64.getEncoder().encodeToString(cipher.doFinal(data.getBytes()));
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            new SecureRandom().nextBytes(iv);
+
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, key, gcmParameterSpec);
+            
+            byte[] encryptedData = cipher.doFinal(data.getBytes());
+            byte[] combined = new byte[iv.length + encryptedData.length];
+
+            System.arraycopy(iv, 0, combined, 0, iv.length);
+            System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
+
+            return Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
             throw new RuntimeException("Encryption error", e);
         }
     }
 
-    // ✅ Decrypt message
     public static String decrypt(String encryptedData, String encryptionKey) {
         try {
-            Cipher cipher = Cipher.getInstance("AES");
+            byte[] decodedData = Base64.getDecoder().decode(encryptedData);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             SecretKey key = getKeyFromBase64(encryptionKey);
-            cipher.init(Cipher.DECRYPT_MODE, key);
-            return new String(cipher.doFinal(Base64.getDecoder().decode(encryptedData)));
+            
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            System.arraycopy(decodedData, 0, iv, 0, iv.length);
+            
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.DECRYPT_MODE, key, gcmParameterSpec);
+
+            byte[] decryptedData = cipher.doFinal(decodedData, iv.length, decodedData.length - iv.length);
+            return new String(decryptedData);
         } catch (Exception e) {
             throw new RuntimeException("Decryption error", e);
         }
     }
 
-    // ✅ Convert base64 key to SecretKey
     private static SecretKey getKeyFromBase64(String key) {
         byte[] decodedKey = Base64.getDecoder().decode(key);
-        return new javax.crypto.spec.SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+        return new SecretKeySpec(decodedKey, "AES");
     }
 }

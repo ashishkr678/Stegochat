@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.entity.enums.OtpType;
 import stegochat.stegochat.exception.BadRequestException;
 import stegochat.stegochat.security.CookieUtil;
 import stegochat.stegochat.service.UserService;
@@ -91,6 +92,24 @@ public class UserController {
 
         userService.updatePhoneNumber(httpServletRequest, newPhoneNumber);
         return ResponseEntity.ok(Map.of("message", "Phone number updated successfully."));
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<Map<String, String>> resendOtp(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String type = request.get("type");
+
+        if (email == null || type == null || email.isEmpty() || type.isEmpty()) {
+            throw new BadRequestException("Email and OTP type are required.");
+        }
+
+        try {
+            OtpType otpType = OtpType.valueOf(type.toUpperCase());
+            userService.resendOtp(email, otpType);
+            return ResponseEntity.ok(Map.of("message", "OTP resent successfully."));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid OTP type.");
+        }
     }
 
     @PostMapping("/logout")

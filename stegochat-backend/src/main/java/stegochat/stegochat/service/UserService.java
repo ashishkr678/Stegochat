@@ -1,6 +1,7 @@
 package stegochat.stegochat.service;
 
 import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.entity.enums.OtpType;
 
 import java.util.Optional;
 
@@ -25,7 +26,9 @@ public interface UserService {
 
     void initiateEmailUpdate(HttpServletRequest request, String newEmail);
 
-    void verifyEmailUpdate(HttpServletRequest request, int otp); 
+    void verifyEmailUpdate(HttpServletRequest request, String otp); 
+    
+    void resendOtp(String email, OtpType otpType);
 
     void logout(HttpServletRequest request, HttpServletResponse response);
     

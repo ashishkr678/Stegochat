@@ -1,18 +1,14 @@
 package stegochat.stegochat.service.impl;
 
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.entity.OtpEntity;
 import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
+import stegochat.stegochat.entity.enums.OtpType;
 import stegochat.stegochat.exception.*;
 import stegochat.stegochat.mapper.UserMapper;
 import stegochat.stegochat.repository.OtpRepository;
@@ -23,10 +19,7 @@ import stegochat.stegochat.security.EncryptionUtil;
 import stegochat.stegochat.security.JwtUtil;
 import stegochat.stegochat.service.EmailOtpService;
 import stegochat.stegochat.service.UserService;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.*;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -44,6 +37,7 @@ public class UserServiceImpl implements UserService {
     private final PendingRegistrationRepository pendingRegistrationRepository;
     private final OtpRepository otpRepository;
 
+    // ✅ Initiate Registration with OTP
     @Override
     @Transactional
     public void initiateRegistration(UserDTO userDTO) {
@@ -53,10 +47,10 @@ public class UserServiceImpl implements UserService {
 
         if (userRepository.existsByEmail(userDTO.getEmail())
                 || pendingRegistrationRepository.findByEmail(userDTO.getEmail()).isPresent()) {
-            throw new EmailAlreadyExistsException("Email is already registered or pending verification.");
+            throw new DuplicateResourceException("Email is already registered or pending verification.");
         }
         if (userRepository.existsByUsername(userDTO.getUsername())) {
-            throw new UsernameAlreadyExistsException("Username is already taken.");
+            throw new DuplicateResourceException("Username is already taken.");
         }
 
         String hashedPassword = passwordEncoder.encode(userDTO.getPassword());
@@ -76,67 +70,78 @@ public class UserServiceImpl implements UserService {
 
         pendingRegistrationRepository.save(pendingUser);
 
-        emailOtpService.sendOtp(userDTO.getEmail(), "REGISTER");
-
+        emailOtpService.sendOtp(userDTO.getEmail(), OtpType.REGISTRATION);
     }
 
+    // ✅ Complete Registration with OTP Verification
     @Override
     @Transactional
     public UserDTO completeRegistration(String email, String otp) {
-        Optional<OtpEntity> otpEntityOpt = otpRepository.findByEmailAndType(email, "REGISTER");
+        emailOtpService.verifyOtp(email, otp, OtpType.REGISTRATION);
 
-        if (otpEntityOpt.isEmpty()) {
-            throw new BadRequestException("No OTP found for this email. Please request OTP again.");
-        }
-
-        OtpEntity otpEntity = otpEntityOpt.get();
-
-        if (otpEntity.isExpired()) {
-            otpRepository.delete(otpEntity);
-            throw new BadRequestException("OTP expired. Please request a new one.");
-        }
-
-        if (!passwordEncoder.matches(otp, otpEntity.getOtp())) {
-            throw new BadRequestException("Incorrect OTP. Please try again.");
-        }
-
-        Optional<PendingRegistrationEntity> pendingUserOpt = pendingRegistrationRepository.findByEmail(email);
-
-        if (pendingUserOpt.isEmpty()) {
-            throw new BadRequestException("No pending registration found. Please register again.");
-        }
-
-        PendingRegistrationEntity pendingUser = pendingUserOpt.get();
+        PendingRegistrationEntity pendingUser = pendingRegistrationRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("No pending registration found. Please register again."));
 
         UsersEntity newUser = UserMapper.toEntity(pendingUser);
         newUser.setCreatedAt(LocalDateTime.now());
 
-        // ✅ Step 1: Generate a base encryption key for this user
         String baseEncryptionKey = EncryptionUtil.generateBaseEncryptionKey();
-
-        // ✅ Step 2: Store the base key in `encryptionKeys`
         newUser.getEncryptionKeys().put("baseKey", baseEncryptionKey);
-
         newUser.setMetadata(Map.of(
                 "createdAt", LocalDateTime.now(),
                 "accountStatus", "ACTIVE"));
 
         userRepository.save(newUser);
-
         pendingRegistrationRepository.deleteByEmail(email);
-        otpRepository.deleteByEmailAndType(email, "REGISTER");
+        otpRepository.deleteByEmailAndType(email, OtpType.REGISTRATION);
 
         return UserMapper.toDTO(newUser);
     }
 
+    // ✅ Initiate Email Update with OTP
+    @Override
+    public void initiateEmailUpdate(HttpServletRequest request, String newEmail) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        if (userRepository.existsByEmail(newEmail)) {
+            throw new BadRequestException("This email is already registered.");
+        }
+
+        userRepository.findByUsername(username)
+                .orElseThrow(() -> new BadRequestException("User not found."));
+
+        emailOtpService.sendOtp(newEmail, OtpType.EMAIL_UPDATE);
+    }
+
+    // ✅ Verify Email Update with OTP
+    @Override
+    public void verifyEmailUpdate(HttpServletRequest request, String otp) {
+        String username = CookieUtil.extractUsernameFromCookie(request);
+
+        UsersEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BadRequestException("User not found."));
+
+        emailOtpService.verifyOtp(user.getEmail(), otp, OtpType.EMAIL_UPDATE);
+
+        userRepository.save(user);
+        otpRepository.deleteByEmailAndType(user.getEmail(), OtpType.EMAIL_UPDATE);
+    }
+
+    // ✅ Resend OTP Dynamically
+    @Override
+    public void resendOtp(String email, OtpType otpType) {
+        emailOtpService.resendOtp(email, otpType);
+    }
+
+    // ✅ User Login
     @Override
     public UserDTO loginUser(String username, String password, HttpServletRequest request,
             HttpServletResponse response) {
         UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UnauthorizedException("Invalid username or password."));
+                .orElseThrow(() -> new AuthenticationException("Invalid username or password."));
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new UnauthorizedException("Invalid username or password.");
+            throw new AuthenticationException("Invalid username or password.");
         }
 
         if (user.getMetadata() == null) {
@@ -223,54 +228,17 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    @Override
-    public void initiateEmailUpdate(HttpServletRequest request, String newEmail) {
-        String username = CookieUtil.extractUsernameFromCookie(request);
-
-        if (userRepository.existsByEmail(newEmail)) {
-            throw new BadRequestException("This email is already registered.");
-        }
-
-        Optional<UsersEntity> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) {
-            throw new BadRequestException("User not found.");
-        }
-
-        emailOtpService.sendOtp(newEmail, "EMAIL_UPDATE");
-    }
-
-    @Override
-    public void verifyEmailUpdate(HttpServletRequest request, int otp) {
-        String username = CookieUtil.extractUsernameFromCookie(request);
-
-        String otpString = String.valueOf(otp);
-
-        Optional<UsersEntity> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) {
-            throw new BadRequestException("User not found.");
-        }
-
-        UsersEntity user = userOpt.get();
-        String newEmail = user.getEmail();
-
-        emailOtpService.verifyOtp(newEmail, otpString, "EMAIL_UPDATE");
-
-        user.setEmail(newEmail);
-        userRepository.save(user);
-
-        otpRepository.deleteByEmailAndType(newEmail, "EMAIL_UPDATE");
-    }
-
+    // ✅ User Logout
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response) {
         String username = CookieUtil.extractUsernameFromCookie(request);
 
         if (username == null) {
-            throw new UnauthorizedException("User not logged in.");
+            throw new AuthenticationException("User not logged in.");
         }
 
         UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UnauthorizedException("User not found."));
+                .orElseThrow(() -> new AuthenticationException("User not found."));
 
         if (user.getMetadata() == null) {
             user.setMetadata(new HashMap<>());
@@ -292,5 +260,4 @@ public class UserServiceImpl implements UserService {
         response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, "Strict"));
         response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(usernameCookie, "Strict"));
     }
-
 }
