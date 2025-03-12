@@ -28,6 +28,7 @@ import stegochat.stegochat.exception.ResourceNotFoundException;
 import stegochat.stegochat.repository.MessageRepository;
 import stegochat.stegochat.repository.UserRepository;
 import stegochat.stegochat.security.EncryptionUtil;
+import stegochat.stegochat.service.NotificationService;
 
 @RestController
 @RequiredArgsConstructor
@@ -35,7 +36,7 @@ public class WebSocketController {
 
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final WebSocketNotificationController notificationController;
+    private final NotificationService notificationService;
     private final MongoTemplate mongoTemplate;
 
     // ✅ Send Message & Trigger Notification
@@ -91,13 +92,12 @@ public class WebSocketController {
 
         messageRepository.save(messageEntity);
 
-        // ✅ Trigger a Message Notification after sending the message
-        notificationController.sendNotification(
-                message.getReceiver(),
-                "New message from " + senderUser.getUsername(),
-                messageEntity.getId(),
-                NotificationType.MESSAGE // ✅ Set correct notification type
-        );
+        notificationService.sendNotification(
+            message.getReceiver(),
+            "New message from " + senderUser.getUsername(),
+            NotificationType.MESSAGE,
+            messageEntity.getId()
+    );
     }
 
     // ✅ Batch Update Message Status (DELIVERED/READ)
@@ -126,6 +126,11 @@ public class WebSocketController {
 
         bulkOps.updateMulti(query, update);
         bulkOps.execute();
+
+        if (status == MessageStatus.READ) {
+            notificationService.markNotificationsAsRead(messageIds);
+        }
+        
     }
 
 }

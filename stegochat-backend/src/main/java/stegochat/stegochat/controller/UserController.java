@@ -28,7 +28,7 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Registration initiated. OTP sent to " + userDTO.getEmail()));
     }
 
-    // ✅ Verify Registration OTP
+    // Verify Registration OTP
     @PostMapping("/register/verify-otp")
     public ResponseEntity<UserDTO> verifyOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -44,7 +44,7 @@ public class UserController {
         return ResponseEntity.ok(userService.completeRegistration(email, otp));
     }
 
-    // ✅ Login
+    // Login
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> loginUser(@RequestBody LoginDTO loginDTO,
                                                          HttpServletRequest request,
@@ -53,19 +53,19 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Login successful", "user", userProfile));
     }
 
-    // ✅ Get User Profile
+    // Get User Profile
     @GetMapping("/profile")
     public ResponseEntity<Map<String, Object>> getUserProfile(HttpServletRequest request) {
         return ResponseEntity.ok(Map.of("user", userService.getUserProfile(request)));
     }
 
-    // ✅ Get User by Username
+    // Get User by Username
     @GetMapping("/user/{username}")
     public ResponseEntity<Map<String, Object>> getUserByUsername(@PathVariable String username) {
-        return ResponseEntity.ok(Map.of("user", userService.getUserByUsername(username)));
+        return ResponseEntity.ok(Map.of("username", userService.getUserByUsername(username)));
     }
 
-    // ✅ Change Password
+    // Change Password
     @PutMapping("/change-password")
     public ResponseEntity<Map<String, String>> changePassword(@RequestBody Map<String, String> request,
                                                               HttpServletRequest httpServletRequest) {
@@ -80,7 +80,7 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Password changed successfully."));
     }
 
-    // ✅ Update Phone Number
+    // Update Phone Number
     @PutMapping("/update-phone")
     public ResponseEntity<Map<String, String>> updatePhoneNumber(@RequestBody Map<String, String> request,
                                                                  HttpServletRequest httpServletRequest) {
@@ -94,7 +94,7 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Phone number updated successfully."));
     }
 
-    // ✅ Resend OTP
+    // Resend OTP
     @PostMapping("/resend-otp")
     public ResponseEntity<Map<String, String>> resendOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -113,7 +113,7 @@ public class UserController {
         }
     }
 
-    // ✅ Logout
+    // Logout
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request, HttpServletResponse response) {
         userService.logout(request, response);

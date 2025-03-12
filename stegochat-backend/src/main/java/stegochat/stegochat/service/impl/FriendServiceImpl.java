@@ -71,8 +71,13 @@ public class FriendServiceImpl implements FriendService {
 
         bulkOps.execute();
 
-        notificationService.createNotification(receiverUsername,
-                "New friend request from " + senderUsername, NotificationType.FRIEND_REQUEST, senderUsername);
+        notificationService.sendNotification(
+                receiverUsername,
+                "New friend request from " + senderUsername,
+                NotificationType.FRIEND_REQUEST,
+                senderUsername
+        );
+
     }
 
     // Accept Friend Request
@@ -104,9 +109,12 @@ public class FriendServiceImpl implements FriendService {
 
         bulkOps.execute();
 
-        notificationService.createNotification(senderUsername,
-                receiverUsername + " accepted your friend request!", NotificationType.FRIEND_REQUEST_ACCEPTED,
-                receiverUsername);
+        notificationService.sendNotification(
+                senderUsername,
+                receiverUsername + " accepted your friend request!",
+                NotificationType.FRIEND_REQUEST_ACCEPTED,
+                receiverUsername
+        );
     }
 
     // Reject Friend Request

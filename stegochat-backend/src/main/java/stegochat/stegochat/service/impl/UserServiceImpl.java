@@ -124,7 +124,6 @@ public class UserServiceImpl implements UserService {
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("User not found."));
 
-        // ✅ Store the pending email in metadata
         user.getMetadata().put("pendingEmail", newEmail);
         userRepository.save(user);
 
@@ -183,11 +182,11 @@ public class UserServiceImpl implements UserService {
 
     // Fetch User by Username
     @Override
-    public Optional<UserDTO> getUserByUsername(String username) {
+    public Optional<String> getUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .map(UserMapper::toDTO)
+                .map(UsersEntity::getUsername)
                 .or(() -> {
-                    throw new ResourceNotFoundException("User with username '" + username + "' not found.");
+                    throw new ResourceNotFoundException("User not found.");
                 });
     }
 

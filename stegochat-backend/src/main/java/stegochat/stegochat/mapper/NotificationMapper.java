@@ -5,7 +5,7 @@ import stegochat.stegochat.entity.NotificationsEntity;
 
 public class NotificationMapper {
 
-    // ✅ Convert Entity to DTO
+    // Convert Entity to DTO
     public static NotificationDTO toDTO(NotificationsEntity notification) {
         return NotificationDTO.builder()
                 .id(notification.getId())
@@ -18,7 +18,7 @@ public class NotificationMapper {
                 .build();
     }
 
-    // ✅ Convert DTO to Entity
+    // Convert DTO to Entity
     public static NotificationsEntity toEntity(NotificationDTO dto) {
         NotificationsEntity notification = NotificationsEntity.create(
                 dto.getUsername(),
