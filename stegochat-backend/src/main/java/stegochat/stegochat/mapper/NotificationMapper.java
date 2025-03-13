@@ -11,6 +11,7 @@ public class NotificationMapper {
                 .id(notification.getId())
                 .username(notification.getUsername())
                 .type(notification.getType())
+                .referenceId(notification.getReferenceId())
                 .message(notification.getMessage())
                 .isRead(notification.isRead())
                 .readAt(notification.getReadAt())
@@ -24,7 +25,7 @@ public class NotificationMapper {
                 dto.getUsername(),
                 dto.getType(),
                 dto.getMessage(),
-                null
+                dto.getReferenceId()
         );
         notification.setRead(dto.isRead());
         notification.setReadAt(dto.getReadAt());

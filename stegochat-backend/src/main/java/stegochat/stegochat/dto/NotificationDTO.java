@@ -13,6 +13,7 @@ public class NotificationDTO {
     private String id;
     private String username;
     private NotificationType type;
+    private String referenceId;
     private String message;
     private boolean isRead;
     private LocalDateTime readAt;

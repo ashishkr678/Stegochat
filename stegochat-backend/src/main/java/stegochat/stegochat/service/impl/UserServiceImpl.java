@@ -5,6 +5,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.dto.UserSummaryDTO;
 import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
 import stegochat.stegochat.entity.enums.OtpType;
@@ -156,7 +157,7 @@ public class UserServiceImpl implements UserService {
         if (session != null) {
             session.setAttribute("userProfile", updatedUserDTO);
         }
-        
+
     }
 
     // Resend OTP Dynamically
@@ -168,10 +169,10 @@ public class UserServiceImpl implements UserService {
     // Retrieve User Profile
     @Override
     public UserDTO getUserProfile(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userProfile") != null) {
-            return (UserDTO) session.getAttribute("userProfile");
-        }
+        // HttpSession session = request.getSession(false);
+        // if (session != null && session.getAttribute("userProfile") != null) {
+        //     return (UserDTO) session.getAttribute("userProfile");
+        // }
 
         String username = CookieUtil.extractUsernameFromCookie(request);
         UsersEntity user = userRepository.findByUsername(username)
@@ -182,9 +183,9 @@ public class UserServiceImpl implements UserService {
 
     // Fetch User by Username
     @Override
-    public Optional<String> getUserByUsername(String username) {
+    public Optional<UserSummaryDTO> getUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .map(UsersEntity::getUsername)
+                .map(UserMapper::toSummaryDTO)
                 .or(() -> {
                     throw new ResourceNotFoundException("User not found.");
                 });

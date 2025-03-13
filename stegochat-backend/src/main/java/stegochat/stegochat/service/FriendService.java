@@ -1,7 +1,7 @@
 package stegochat.stegochat.service;
 
 import jakarta.servlet.http.HttpServletRequest;
-import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.dto.UserSummaryDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,11 +16,11 @@ public interface FriendService {
     
     void removeFriend(HttpServletRequest request, String friendUsername);
     
-    List<UserDTO> getFriends(HttpServletRequest request);
+    List<UserSummaryDTO> getFriends(HttpServletRequest request);
     
-    List<UserDTO> getPendingFriendRequests(HttpServletRequest request);
+    List<UserSummaryDTO> getPendingFriendRequests(HttpServletRequest request);
 
-    List<UserDTO> getOnlineFriends(HttpServletRequest request);
+    List<UserSummaryDTO> getOnlineFriends(HttpServletRequest request);
 
     boolean isFriendOnline(HttpServletRequest request, String friendUsername);
 

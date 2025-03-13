@@ -1,8 +1,10 @@
 package stegochat.stegochat.service;
 
 import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.dto.UserSummaryDTO;
 import stegochat.stegochat.entity.enums.OtpType;
 
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,7 +20,7 @@ public interface UserService {
 
     UserDTO getUserProfile(HttpServletRequest request);
 
-    Optional<String> getUserByUsername(String username);
+    Optional<UserSummaryDTO> getUserByUsername(String username);
 
     void changePassword(HttpServletRequest request, String currentPassword, String newPassword);
 

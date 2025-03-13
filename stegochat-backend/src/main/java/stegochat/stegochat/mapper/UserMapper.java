@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import stegochat.stegochat.dto.UserDTO;
+import stegochat.stegochat.dto.UserSummaryDTO;
 import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
 
@@ -25,7 +26,7 @@ public class UserMapper {
                 .sentRequests(user.getSentRequests())
                 .receivedRequests(user.getReceivedRequests())
                 .online(user.isOnline())
-                .lastSeen(user.getLastSeen()) 
+                .lastSeen(user.getLastSeen())
                 .build();
     }
 
@@ -72,4 +73,12 @@ public class UserMapper {
                 .build();
     }
 
+    public static UserSummaryDTO toSummaryDTO(UsersEntity user) {
+        return new UserSummaryDTO(
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getAbout(),
+                user.getProfilePicture());
+    }
 }
