@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -59,8 +60,9 @@ public class MessageController {
     private final NotificationService notificationService;
     private final MessageService messageService;
     private final MongoTemplate mongoTemplate;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    // ✅ Get Paginated & Sorted Conversation Between Two Users
+    // Get Paginated & Sorted Conversation Between Two Users
     @GetMapping("/conversation")
     public ResponseEntity<List<MessageDTO>> getConversation(
             HttpServletRequest request,
@@ -76,7 +78,7 @@ public class MessageController {
         return ResponseEntity.ok(conversation);
     }
 
-    // ✅ Send Message (Real-Time WebSocket)
+    // Send Message (Real-Time WebSocket)
     @MessageMapping("/chat")
     public void sendMessage(WebSocketMessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
         HttpSession session = (HttpSession) headerAccessor.getSessionAttributes().get("session");
@@ -90,7 +92,6 @@ public class MessageController {
             throw new BadRequestException("You can only chat with friends.");
         }
 
-        // ✅ Refresh encryption keys periodically
         Long lastRefreshTime = (Long) session.getAttribute("encryptionKeysRefreshTime");
         long currentTime = System.currentTimeMillis();
         boolean shouldRefreshKeys = (lastRefreshTime == null || (currentTime - lastRefreshTime) > (30 * 60 * 1000));
@@ -112,7 +113,6 @@ public class MessageController {
             throw new BadRequestException("Encryption key not found for this friend.");
         }
 
-        // ✅ Encrypt and store the message
         String encryptedContent = (message.getMessageType().equals("TEXT"))
                 ? EncryptionUtil.encrypt(message.getEncryptedContent(), encryptionKey)
                 : null;
@@ -128,7 +128,6 @@ public class MessageController {
 
         messageRepository.save(messageEntity);
 
-        // ✅ Send notification
         notificationService.sendNotification(
                 message.getReceiver(),
                 "New message from " + senderUser.getUsername(),
@@ -136,7 +135,7 @@ public class MessageController {
                 messageEntity.getId());
     }
 
-    // ✅ Update Message Status (DELIVERED/READ) - WebSocket
+    // Update Message Status (DELIVERED/READ) - WebSocket
     @MessageMapping("/update-status")
     public void updateMessageStatus(List<String> messageIds, String newStatus,
             SimpMessageHeaderAccessor headerAccessor) {
@@ -159,17 +158,26 @@ public class MessageController {
 
         if (status == MessageStatus.READ) {
             notificationService.markNotificationsAsRead(messageIds);
+
+            for (String msgId : messageIds) {
+                MessagesEntity msg = messageRepository.findById(msgId).orElse(null);
+                if (msg != null) {
+                    String receiver = msg.getSenderUsername(); // Notify sender that their message is read
+                    messagingTemplate.convertAndSend("/topic/messages/" + receiver,
+                            Map.of("messageId", msgId, "status", "READ"));
+                }
+            }
         }
     }
 
-    // ✅ Delete Message for Self (`FOR_ME`)
+    // Delete Message for Self (`FOR_ME`)
     @DeleteMapping("/delete-for-me/{messageId}")
     public ResponseEntity<Map<String, String>> deleteForMe(HttpServletRequest request, @PathVariable String messageId) {
         messageService.deleteMessageForMe(request, messageId);
         return ResponseEntity.ok(Map.of("message", "Message deleted for you."));
     }
 
-    // ✅ Delete Message for Everyone (`FOR_EVERYONE`)
+    // Delete Message for Everyone (`FOR_EVERYONE`)
     @DeleteMapping("/delete-for-everyone/{messageId}")
     public ResponseEntity<Map<String, String>> deleteForEveryone(HttpServletRequest request,
             @PathVariable String messageId) {
@@ -177,14 +185,14 @@ public class MessageController {
         return ResponseEntity.ok(Map.of("message", "Message deleted for everyone."));
     }
 
-    // ✅ Delete a Chat (Hides Messages)
+    // Delete a Chat (Hides Messages)
     @DeleteMapping("/delete-chat/{otherUser}")
     public ResponseEntity<Map<String, String>> deleteChat(HttpServletRequest request, @PathVariable String otherUser) {
         messageService.deleteChat(request, otherUser);
         return ResponseEntity.ok(Map.of("message", "Chat deleted successfully."));
     }
 
-    // ✅ Upload Media File
+    // Upload Media File
     @PostMapping("/upload-media")
     public ResponseEntity<Map<String, String>> uploadMedia(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -201,7 +209,7 @@ public class MessageController {
         }
     }
 
-    // ✅ Download Media File
+    // Download Media File
     @GetMapping("/download/{fileId}")
     public ResponseEntity<GridFsResource> downloadMedia(@PathVariable String fileId) {
         GridFsResource resource = messageService.getFile(fileId);

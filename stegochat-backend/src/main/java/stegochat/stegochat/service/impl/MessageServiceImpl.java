@@ -47,15 +47,14 @@ public class MessageServiceImpl implements MessageService {
 
     private static final long ENCRYPTION_KEY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
+    // Fetch Chat
     @Override
     public List<MessageDTO> getConversation(HttpServletRequest request, String otherUser, Pageable pageable) {
         String loggedInUser = CookieUtil.extractUsernameFromCookie(request);
         HttpSession session = request.getSession();
 
-        // ✅ Retrieve encryption keys
         Map<String, String> encryptionKeys = getEncryptionKeys(loggedInUser, session);
 
-        // ✅ Fetch messages in a single optimized query
         Page<MessagesEntity> messagesPage = messageRepository.findBySenderUsernameOrReceiverUsernameOrderByCreatedAt(
                 loggedInUser, otherUser, pageable);
 
@@ -64,9 +63,8 @@ public class MessageServiceImpl implements MessageService {
         List<MessageDTO> conversation = messagesPage.getContent().stream()
                 .filter(message -> !message.isSoftDeleted())
                 .map(message -> {
-                    MessageDTO dto = decryptMessage(message, loggedInUser, encryptionKeys);
+                    MessageDTO dto = decryptMessage(message, loggedInUser, encryptionKeys, session);
 
-                    // ✅ If the message is already delivered but not read, mark it as read
                     if (!message.getSenderUsername().equals(loggedInUser)) {
                         List<MessageStatusRecord> statusHistory = message.getStatusHistory();
                         if (!statusHistory.isEmpty()
@@ -78,7 +76,6 @@ public class MessageServiceImpl implements MessageService {
                 })
                 .toList();
 
-        // ✅ Batch update messages to READ
         if (!unreadMessageIds.isEmpty()) {
             updateMessageStatusBatch(unreadMessageIds, MessageStatus.READ);
         }
@@ -116,7 +113,8 @@ public class MessageServiceImpl implements MessageService {
         return storedKeys;
     }
 
-    private MessageDTO decryptMessage(MessagesEntity message, String loggedInUser, Map<String, String> encryptionKeys) {
+    private MessageDTO decryptMessage(MessagesEntity message, String loggedInUser, Map<String, String> encryptionKeys,
+            HttpSession session) {
         MessageDTO dto = MessageMapper.toDTO(message);
         String conversationUser = loggedInUser.equals(message.getSenderUsername()) ? message.getReceiverUsername()
                 : message.getSenderUsername();
@@ -125,16 +123,25 @@ public class MessageServiceImpl implements MessageService {
         if (encryptionKey != null) {
             dto.setContent(EncryptionUtil.decrypt(dto.getContent(), encryptionKey));
         } else {
-            dto.setContent("[Encrypted Message - Key Missing]");
+            UsersEntity senderUser = userRepository.findByUsername(loggedInUser)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
+            encryptionKeys = senderUser.getEncryptionKeys();
+            session.setAttribute("encryptionKeys", encryptionKeys);
+            encryptionKey = encryptionKeys.get(conversationUser);
+
+            dto.setContent(encryptionKey != null ? EncryptionUtil.decrypt(dto.getContent(), encryptionKey)
+                    : "[Encrypted Message - Key Missing]");
         }
         return dto;
     }
 
+    // delete message for me
     @Override
     public void deleteMessageForMe(HttpServletRequest request, String messageId) {
         updateDeletionRecord(request, messageId, "FOR_ME");
     }
 
+    // delete message for everyone
     @Override
     public void deleteMessageForEveryone(HttpServletRequest request, String messageId) {
         updateDeletionRecord(request, messageId, "FOR_EVERYONE");
@@ -153,24 +160,40 @@ public class MessageServiceImpl implements MessageService {
         });
     }
 
+    // delete chat
     @Override
     public void deleteChat(HttpServletRequest request, String otherUser) {
         String username = CookieUtil.extractUsernameFromCookie(request);
         List<MessagesEntity> messages = messageRepository.findBySenderUsernameOrReceiverUsernameOrderByCreatedAt(
                 username, otherUser, Pageable.unpaged()).getContent();
 
+        List<String> mediaFileIds = new ArrayList<>();
+
         for (MessagesEntity message : messages) {
             message.getDeletionRecords()
                     .add(new DeletionRecord(message.getId(), username, "CHAT_DELETED", LocalDateTime.now()));
+
+            if (message.getMedia() != null) {
+                mediaFileIds.add(message.getMedia().getMediaFileId());
+            }
+
+            message.setSoftDeleted(true);
         }
+
+        for (String fileId : mediaFileIds) {
+            deleteFile(fileId);
+        }
+
         messageRepository.saveAll(messages);
     }
 
+    // store media file in DB
     @Override
     public ObjectId storeFile(MultipartFile file) throws IOException {
         return gridFsTemplate.store(file.getInputStream(), file.getOriginalFilename(), file.getContentType());
     }
-
+    
+    // get media file from DB
     @Override
     public GridFsResource getFile(String fileId) {
         GridFSFile gridFSFile = gridFsTemplate.findOne(new Query()
@@ -180,6 +203,7 @@ public class MessageServiceImpl implements MessageService {
                 : null;
     }
 
+    // delete media file in DB
     @Override
     public void deleteFile(String fileId) {
         gridFsTemplate.delete(new Query()
