@@ -9,7 +9,7 @@ import java.util.List;
 
 public class MessageMapper {
 
-    // ✅ Convert Entity to DTO (Hide unnecessary data)
+    // ✅ Convert Entity to DTO
     public static MessageDTO toDTO(MessagesEntity message) {
         return MessageDTO.builder()
                 .id(message.getId())
@@ -20,13 +20,8 @@ public class MessageMapper {
                 .isEdited(message.isEdited())
                 .isSoftDeleted(message.isSoftDeleted())
                 .isRecalled(message.isRecalled())
-                .latestStatus(getLatestStatus(message.getStatusHistory()))  // ✅ Show only latest status
-                .mediaFileId(message.getMediaFileId())
-                .mediaFileName(message.getMediaFileName())
-                .mediaFileSize(message.getMediaFileSize())
-                .mediaContentType(message.getMediaContentType())
-                .mediaDuration(message.getMediaDuration())
-                .isStego(message.isStego())
+                .latestStatus(getLatestStatus(message.getStatusHistory())) 
+                .media(message.getMedia())  
                 .createdAt(message.getCreatedAt())
                 .build();
     }
@@ -42,20 +37,15 @@ public class MessageMapper {
                 .isEdited(dto.isEdited())
                 .isSoftDeleted(dto.isSoftDeleted())
                 .isRecalled(dto.isRecalled())
-                .mediaFileId(dto.getMediaFileId())
-                .mediaFileName(dto.getMediaFileName())
-                .mediaFileSize(dto.getMediaFileSize())
-                .mediaContentType(dto.getMediaContentType())
-                .mediaDuration(dto.getMediaDuration())
-                .isStego(dto.isStego())
+                .media(dto.getMedia())
                 .build();
     }
 
-    // ✅ Extract latest status from statusHistory
+    // ✅ Extract latest status
     private static MessageStatus getLatestStatus(List<MessageStatusRecord> statusHistory) {
         if (statusHistory == null || statusHistory.isEmpty()) {
-            return MessageStatus.SENT;  // Default status if no history
+            return MessageStatus.SENT;
         }
-        return statusHistory.get(statusHistory.size() - 1).status(); // Last record = latest status
+        return statusHistory.get(statusHistory.size() - 1).status(); 
     }
 }

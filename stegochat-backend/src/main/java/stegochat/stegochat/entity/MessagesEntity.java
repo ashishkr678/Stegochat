@@ -1,21 +1,18 @@
 package stegochat.stegochat.entity;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import stegochat.stegochat.entity.enums.MessageType;
 import stegochat.stegochat.entity.records.DeletionRecord;
+import stegochat.stegochat.entity.records.MediaData;
 import stegochat.stegochat.entity.records.MessageStatusRecord;
 
 @Document(collection = "messages")
@@ -28,37 +25,33 @@ public class MessagesEntity extends BaseEntity {
 
     @Id
     private String id;
-    
+
     @Indexed
     private String senderUsername;
 
     @Indexed
     private String receiverUsername;
 
+    @Indexed
     private MessageType messageType;
+
     private String content;
     private boolean isEdited;
+
+    @Indexed
     private boolean isSoftDeleted;
+
+    @Indexed
     private boolean isRecalled;
 
     @Builder.Default
-    private List<DeletionRecord> deletionRecords = new ArrayList<>(); // Who deleted & how (for me/everyone)
+    private List<DeletionRecord> deletionRecords = new ArrayList<>();
 
     @Builder.Default
-    private List<MessageStatusRecord> statusHistory = new ArrayList<>(); // SENT, DELIVERED, READ tracking
+    private List<MessageStatusRecord> statusHistory = new ArrayList<>();
 
-    // Media Files
-    private String mediaFileId;
-    private String mediaFileName;
-    private long mediaFileSize;
-    private String mediaContentType;
-    private Long mediaDuration;
-    private boolean isStego;
-    private String stegoId;
+    private MediaData media;
 
-    // ✅ Metadata for Audit Logs (timestamps, edits, etc.)
     @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
-    
 }
-

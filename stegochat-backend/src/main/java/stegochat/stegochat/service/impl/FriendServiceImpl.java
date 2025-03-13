@@ -85,20 +85,24 @@ public class FriendServiceImpl implements FriendService {
     @Transactional
     public void acceptFriendRequest(HttpServletRequest request, String senderUsername) {
         String receiverUsername = CookieUtil.extractUsernameFromCookie(request);
-
+    
         UsersEntity receiver = userRepository.findByUsername(receiverUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
-
+    
+        UsersEntity sender = userRepository.findByUsername(senderUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found."));
+    
         if (!receiver.getReceivedRequests().contains(senderUsername)) {
             throw new BadRequestException("No friend request found from this user.");
         }
-
+    
         String receiverKey = EncryptionUtil.generateFriendEncryptionKey(receiverUsername, senderUsername);
-
+        String senderKey = EncryptionUtil.generateFriendEncryptionKey(senderUsername, receiverUsername);
+    
         LocalDateTime now = LocalDateTime.now();
-
+    
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
-
+    
         bulkOps.updateOne(
                 Query.query(Criteria.where("username").is(receiverUsername)),
                 new Update()
@@ -106,9 +110,17 @@ public class FriendServiceImpl implements FriendService {
                         .pull("receivedRequests", senderUsername)
                         .set("encryptionKeys." + senderUsername, receiverKey)
                         .set("metadata.friendRequestsAccepted." + senderUsername, now));
-
+    
+        bulkOps.updateOne(
+                Query.query(Criteria.where("username").is(senderUsername)),
+                new Update()
+                        .addToSet("friends", receiverUsername)
+                        .pull("sentRequests", receiverUsername)
+                        .set("encryptionKeys." + receiverUsername, senderKey)
+                        .set("metadata.friendRequestsAccepted." + receiverUsername, now));
+    
         bulkOps.execute();
-
+    
         notificationService.sendNotification(
                 senderUsername,
                 receiverUsername + " accepted your friend request!",
@@ -116,6 +128,7 @@ public class FriendServiceImpl implements FriendService {
                 receiverUsername
         );
     }
+    
 
     // Reject Friend Request
     @Override

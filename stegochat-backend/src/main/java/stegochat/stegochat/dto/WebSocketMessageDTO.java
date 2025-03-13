@@ -1,6 +1,7 @@
 package stegochat.stegochat.dto;
 
 import lombok.*;
+import stegochat.stegochat.entity.records.MediaData;
 
 @Data
 @NoArgsConstructor
@@ -11,4 +12,5 @@ public class WebSocketMessageDTO {
     private String receiver;
     private String encryptedContent;
     private String messageType;
+    private MediaData media;
 }
