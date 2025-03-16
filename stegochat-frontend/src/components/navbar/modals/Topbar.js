@@ -1,11 +1,21 @@
 import React, { useState } from "react";
-import { Menu, Users, Bell, Search } from "lucide-react";
+import { Menu, Users, Bell, Search, LogOut } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { userLogout } from "../../../redux/slices/authSlice";
 
 const Topbar = ({ toggleSidebar }) => {
   const [selected, setSelected] = useState(null);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const handleClick = (id) => {
     setSelected(id === selected ? null : id);
+  };
+
+  const handleLogout = () => {
+    dispatch(userLogout());
+    navigate("/login");
   };
 
   return (
@@ -64,6 +74,15 @@ const Topbar = ({ toggleSidebar }) => {
             alt="Profile"
             className="w-10 h-10 rounded-full cursor-pointer transition-transform transform hover:scale-105"
           />
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center text-red-600 hover:text-red-700 transition-all duration-300"
+          >
+            <LogOut size={22} className="mr-1" />
+            <span className="text-sm font-medium">Logout</span>
+          </button>
         </div>
       </div>
     </header>

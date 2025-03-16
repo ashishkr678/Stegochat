@@ -1,15 +1,27 @@
 package stegochat.stegochat.service.impl;
 
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import stegochat.stegochat.dto.UserDTO;
 import stegochat.stegochat.dto.UserSummaryDTO;
 import stegochat.stegochat.entity.PendingRegistrationEntity;
 import stegochat.stegochat.entity.UsersEntity;
 import stegochat.stegochat.entity.enums.OtpType;
-import stegochat.stegochat.exception.*;
+import stegochat.stegochat.exception.AuthenticationException;
+import stegochat.stegochat.exception.BadRequestException;
+import stegochat.stegochat.exception.DuplicateResourceException;
+import stegochat.stegochat.exception.ResourceNotFoundException;
 import stegochat.stegochat.mapper.UserMapper;
 import stegochat.stegochat.repository.OtpRepository;
 import stegochat.stegochat.repository.PendingRegistrationRepository;
@@ -17,13 +29,9 @@ import stegochat.stegochat.repository.UserRepository;
 import stegochat.stegochat.security.CookieUtil;
 import stegochat.stegochat.security.EncryptionUtil;
 import stegochat.stegochat.security.JwtUtil;
+import stegochat.stegochat.security.WebSocketSessionManager;
 import stegochat.stegochat.service.EmailOtpService;
 import stegochat.stegochat.service.UserService;
-import jakarta.servlet.http.*;
-
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,9 +52,14 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Invalid user data. Email and username are required.");
         }
 
-        Boolean exists = userRepository.existsByUsernameOrEmail(userDTO.getUsername(), userDTO.getEmail());
-        if (Boolean.TRUE.equals(exists)) {
-            throw new DuplicateResourceException("Username or Email already exists.");
+        Boolean existsUsername = userRepository.existsByUsername(userDTO.getUsername());
+        if (Boolean.TRUE.equals(existsUsername)) {
+            throw new DuplicateResourceException("Username already taken.");
+        }
+
+        Boolean existsEmail = userRepository.existsByEmail(userDTO.getEmail());
+        if (Boolean.TRUE.equals(existsEmail)) {
+            throw new DuplicateResourceException("Email already in used.");
         }
 
         PendingRegistrationEntity pendingUser = UserMapper.toPendingEntity(userDTO, passwordEncoder);
@@ -169,10 +182,6 @@ public class UserServiceImpl implements UserService {
     // Retrieve User Profile
     @Override
     public UserDTO getUserProfile(HttpServletRequest request) {
-        // HttpSession session = request.getSession(false);
-        // if (session != null && session.getAttribute("userProfile") != null) {
-        //     return (UserDTO) session.getAttribute("userProfile");
-        // }
 
         String username = CookieUtil.extractUsernameFromCookie(request);
         UsersEntity user = userRepository.findByUsername(username)
@@ -244,6 +253,8 @@ public class UserServiceImpl implements UserService {
         user.setLastSeen(LocalDateTime.now());
         userRepository.save(user);
 
+        WebSocketSessionManager.removeUser(username);
+
         HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
@@ -257,4 +268,5 @@ public class UserServiceImpl implements UserService {
         response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, "Strict"));
         response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(usernameCookie, "Strict"));
     }
+
 }

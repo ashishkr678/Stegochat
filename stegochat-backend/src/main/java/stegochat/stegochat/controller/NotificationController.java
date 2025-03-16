@@ -39,9 +39,10 @@ public class NotificationController {
     }
 
     // Bulk Mark Notifications as Read (Efficient DB Update)
-    @MessageMapping("/read-notifications")
-    public void markNotificationsAsRead(@RequestBody List<String> notificationIds) {
+    @PostMapping("/read-notifications")
+    public ResponseEntity<Map<String, String>> markNotificationsAsRead(@RequestBody List<String> notificationIds) {
         notificationService.markNotificationsAsRead(notificationIds);
+        return ResponseEntity.ok(Map.of("message", "Notifications marked as read."));
     }
 
     // Mark All Notifications as Read (Clicking Notification Tab)

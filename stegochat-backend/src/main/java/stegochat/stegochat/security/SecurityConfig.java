@@ -36,12 +36,15 @@ public class SecurityConfig {
                         "api/users/register/verify-otp",
                         "/api/users/login",
                         "/api/users/logout",
+                        "/api/users/resend-otp",
                         "/api/users/forgot-password/send-otp",
                         "/api/users/forgot-password/verify-otp",
-                        "/api/users/forgot-password/reset")
+                        "/api/users/forgot-password/reset",
+                        "/ws/**")
                 .permitAll()
                 .anyRequest().authenticated()
                 .and()
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -63,18 +66,13 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-
-        String frontendDomain = System.getenv("FRONTEND_DOMAIN");
-
-        if ("localhost".equals(frontendDomain)) {
-            config.addAllowedOrigin("http://localhost:3000");
-        } else {
-            config.addAllowedOrigin("http://localhost:3000");
-        }
-
+        config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedHeader("*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.addExposedHeader("Authorization");
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
+
 }

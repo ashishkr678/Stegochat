@@ -14,8 +14,7 @@ public interface UserRepository extends MongoRepository<UsersEntity, String> {
     Optional<UsersEntity> findByUsername(String username);
     Optional<UsersEntity> findByEmail(String email);
 
-    @Query("{ '$or': [{'username': ?0}, {'email': ?1}] }")
-    Boolean existsByUsernameOrEmail(String username, String email);    
+    Boolean existsByUsername(String username);    
 
     boolean existsByEmail(String email);
 

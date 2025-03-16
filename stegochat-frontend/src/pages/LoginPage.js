@@ -1,36 +1,66 @@
 import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
+import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import { showLoading, hideLoading } from "../redux/slices/loadingSlice";
+import { userLogin } from "../redux/slices/authSlice";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
-    emailOrUsername: "",
+    username: "",
     password: "",
   });
+  const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const validateForm = () => {
+    let newErrors = {};
+    if (!formData.username.trim()) newErrors.username = "Username is required.";
+    if (!formData.password.trim()) newErrors.password = "Password is required.";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     setFormData({ ...formData, [id]: value });
+    setErrors((prevErrors) => ({ ...prevErrors, [id]: "" }));
+    if (errors.general) {
+      setErrors((prevErrors) => ({ ...prevErrors, general: "" }));
+    }
   };
 
-  const handleLogin = () => {
-    alert("Login functionality to be implemented!");
-  };
+  const handleLogin = async () => {
+    if (!validateForm()) return;
 
-  const handleLoginWithGoogle = () => {
-    alert("Google login functionality to be implemented!");
+    setIsLoggingIn(true);
+    dispatch(showLoading());
+
+    try {
+      await dispatch(userLogin(formData)).unwrap();
+      toast.success("Login successful!");
+      navigate("/");
+    } catch (err) {
+      setErrors({ general: err || "Invalid username or password." });
+    } finally {
+      setIsLoggingIn(false);
+      dispatch(hideLoading());
+    }
   };
 
   const handleForgotPassword = () => {
-    alert("Forgot password functionality to be implemented!");
+    toast.info("Forgot password functionality coming soon!");
   };
 
   return (
     <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center px-4 sm:px-0">
       {/* For larger screens, show the container */}
       <div className="hidden sm:block w-full max-w-sm bg-gradient-to-br from-blue-100 via-blue-50 to-white shadow-2xl rounded-xl p-5">
-        {/* Common Content */}
         {renderContent()}
       </div>
 
@@ -43,11 +73,7 @@ const LoginPage = () => {
     return (
       <div className={isMobile ? "space-y-4" : ""}>
         {/* Title */}
-        <h1
-          className={`text-3xl font-extrabold text-center text-gray-800 ${
-            isMobile ? "mt-4" : ""
-          }`}
-        >
+        <h1 className="text-3xl font-extrabold text-center text-gray-800 mt-4">
           Hello Again!
         </h1>
 
@@ -56,21 +82,26 @@ const LoginPage = () => {
           Your safe and private chats are eagerly awaiting. Let’s dive in!
         </p>
 
-        {/* Form */}
+        {/* Login Form */}
         <div className={`space-y-2 ${isMobile ? "px-2" : ""}`}>
-          {/* Email or Username Input */}
+          {/* Username */}
           <div>
             <h2 className="text-sm font-semibold text-gray-700 mb-1">
-              Email or Username
+              Username
             </h2>
             <input
               type="text"
-              id="emailOrUsername"
-              value={formData.emailOrUsername}
+              id="username"
+              value={formData.username}
               onChange={handleInputChange}
-              placeholder="Email or Username"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Enter your username"
+              className={`w-full px-4 py-2 border ${
+                errors.emailOrUsername ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400`}
             />
+            {errors.username && (
+              <p className="text-red-500 text-xs">{errors.username}</p>
+            )}
           </div>
 
           {/* Password Input */}
@@ -84,8 +115,10 @@ const LoginPage = () => {
                 id="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="Enter your password"
+                className={`w-full px-4 py-2 border ${
+                  errors.password ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400`}
               />
               <button
                 type="button"
@@ -95,39 +128,54 @@ const LoginPage = () => {
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            {/* Forgot Password */}
-            <div className="text-right">
-              <button
-                onClick={handleForgotPassword}
-                className="text-gray-500 text-sm font-medium hover:text-gray-700"
-              >
-                Forgot Password?
-              </button>
-            </div>
+            {errors.password && (
+              <p className="text-red-500 text-xs">{errors.password}</p>
+            )}
+          </div>
+
+          {/* Forgot Password */}
+          <div className="text-right">
+            <button
+              onClick={handleForgotPassword}
+              className="text-gray-500 text-sm font-medium hover:text-gray-700"
+            >
+              Forgot Password?
+            </button>
           </div>
         </div>
+
+        {/* General Error (Invalid Credentials) */}
+        {errors.general && (
+          <p className="text-red-500 text-sm text-center mt-2">
+            {errors.general}
+          </p>
+        )}
 
         {/* Actions Section */}
         <div className={`mt-4 ${isMobile ? "px-2" : ""}`}>
           <button
             onClick={handleLogin}
-            className="w-full bg-blue-600 text-white py-[8px] px-[12px] rounded-[8px] font-medium hover:bg-blue-700"
+            disabled={isLoggingIn}
+            className={`w-full py-2 text-white rounded-lg ${
+              isLoggingIn
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
-            Get Started
-          </button>
-          <div className="flex items-center my-1">
-            <hr className="flex-grow border-gray-300" />
-            <span className="px-4 text-gray-400 font-medium text-sm">or</span>
-            <hr className="flex-grow border-gray-300" />
-          </div>
-          <button
-            onClick={handleLoginWithGoogle}
-            className="w-full flex items-center justify-center rounded-[8px] font-medium text-gray-900 border-gray-300 bg-yellow-500 hover:bg-yellow-600 border px-[12px] py-[8px] gap-x-2"
-          >
-            <FcGoogle />
-            <p>Sign in with Google</p>
+            {isLoggingIn ? "Logging in..." : "Get Started"}
           </button>
         </div>
+
+        {/* Already have an account? Register */}
+        <p className="text-center text-gray-600 text-sm mt-4">
+          Don't have an account?{" "}
+          <Link
+            to="/register"
+            className="text-blue-600 font-semibold hover:underline"
+          >
+            Register here
+          </Link>
+        </p>
       </div>
     );
   }
