@@ -47,6 +47,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (ExpiredJwtException e) {
                 jwtUtil.markUserOffline(e.getClaims().getSubject());
                 request.getSession().invalidate();
+                CookieUtil.clearCookies(response);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Session expired. Please log in again.");
                 return;
             } catch (JwtException e) {

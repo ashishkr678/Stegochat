@@ -19,63 +19,67 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ForgotPasswordServiceImpl implements ForgotPasswordService {
 
-    private final UserRepository userRepository;
-    private final EmailOtpService emailOtpService;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private final PendingPasswordResetRepository pendingPasswordResetRepository;
+        private final UserRepository userRepository;
+        private final EmailOtpService emailOtpService;
+        private final BCryptPasswordEncoder passwordEncoder;
+        private final PendingPasswordResetRepository pendingPasswordResetRepository;
 
-    // Send OTP for Password Reset
-    @Override
-    public void sendOtpForPasswordReset(String username) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
+        // Send OTP for Password Reset
+        @Override
+        public String sendOtpForPasswordReset(String username) {
+                UsersEntity user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
-        String userEmail = user.getEmail();
+                String userEmail = user.getEmail();
 
-        pendingPasswordResetRepository.deleteByEmail(userEmail);
+                pendingPasswordResetRepository.deleteByEmail(userEmail);
 
-        PendingPasswordResetEntity pendingReset = PendingPasswordResetEntity.builder()
-                .email(userEmail)
-                .createdAt(LocalDateTime.now())
-                .verified(false)
-                .build();
+                PendingPasswordResetEntity pendingReset = PendingPasswordResetEntity.builder()
+                                .email(userEmail)
+                                .createdAt(LocalDateTime.now())
+                                .verified(false)
+                                .build();
 
-        pendingPasswordResetRepository.save(pendingReset);
+                pendingPasswordResetRepository.save(pendingReset);
 
-        emailOtpService.sendOtp(userEmail, OtpType.PASSWORD_RESET);
-    }
+                emailOtpService.sendOtp(userEmail, OtpType.PASSWORD_RESET);
 
-    // Verify OTP
-    @Override
-    public void verifyOtpForPasswordReset(String username, String otp) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
+                return userEmail;
+        }
 
-        String email = user.getEmail();
+        // Verify OTP
+        @Override
+        public void verifyOtpForPasswordReset(String username, String otp) {
+                UsersEntity user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
-        PendingPasswordResetEntity pendingReset = pendingPasswordResetRepository.findByEmailAndVerifiedFalse(email)
-                .orElseThrow(() -> new BadRequestException("No pending password reset request found."));
+                String email = user.getEmail();
 
-        emailOtpService.verifyOtp(email, otp, OtpType.PASSWORD_RESET);
+                PendingPasswordResetEntity pendingReset = pendingPasswordResetRepository
+                                .findByEmailAndVerifiedFalse(email)
+                                .orElseThrow(() -> new BadRequestException("No pending password reset request found."));
 
-        pendingReset.setVerified(true);
-        pendingPasswordResetRepository.save(pendingReset);
-    }
+                emailOtpService.verifyOtp(email, otp, OtpType.PASSWORD_RESET);
 
-    // Reset Password
-    @Override
-    public void resetPassword(String username, String newPassword) {
-        UsersEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
+                pendingReset.setVerified(true);
+                pendingPasswordResetRepository.save(pendingReset);
+        }
 
-        String email = user.getEmail();
+        // Reset Password
+        @Override
+        public void resetPassword(String username, String newPassword) {
+                UsersEntity user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
-        PendingPasswordResetEntity pendingReset = pendingPasswordResetRepository.findByEmailAndVerifiedTrue(email)
-                .orElseThrow(() -> new BadRequestException("OTP not verified. Cannot reset password."));
+                String email = user.getEmail();
 
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
+                PendingPasswordResetEntity pendingReset = pendingPasswordResetRepository
+                                .findByEmailAndVerifiedTrue(email)
+                                .orElseThrow(() -> new BadRequestException("OTP not verified. Cannot reset password."));
 
-        pendingPasswordResetRepository.deleteByEmail(email);
-    }
+                user.setPassword(passwordEncoder.encode(newPassword));
+                userRepository.save(user);
+
+                pendingPasswordResetRepository.deleteByEmail(email);
+        }
 }

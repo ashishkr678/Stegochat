@@ -20,6 +20,8 @@ public interface UserService {
 
     UserDTO getUserProfile(HttpServletRequest request);
 
+    List<UserSummaryDTO> searchUsersByUsername(String query);
+
     Optional<UserSummaryDTO> getUserByUsername(String username);
 
     void changePassword(HttpServletRequest request, String currentPassword, String newPassword);

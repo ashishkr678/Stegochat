@@ -1,16 +1,17 @@
 import React from "react";
-import AppRouter from "./router/AppRouter"; // ✅ Import AppRouter
+import AppRouter from "./router/AppRouter";
 import { useAuth } from "./hooks/useAuth";
 import Navbar from "./components/navbar/Navbar";
 import GlobalLoader from "./components/GlobalLoader";
 
 const App = () => {
-  const { user } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) return <GlobalLoader />;
 
   return (
     <div>
-      {user && <Navbar />}
-      <GlobalLoader />
+      {isAuthenticated && <Navbar />}
       <AppRouter />
     </div>
   );

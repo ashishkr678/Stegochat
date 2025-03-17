@@ -2,7 +2,7 @@ package stegochat.stegochat.service;
 
 public interface ForgotPasswordService {
 
-    void sendOtpForPasswordReset(String email);
+    String sendOtpForPasswordReset(String email);
     
     void verifyOtpForPasswordReset(String username, String otp);
 

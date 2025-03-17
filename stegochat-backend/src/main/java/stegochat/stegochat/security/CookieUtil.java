@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class CookieUtil {
 
@@ -25,7 +26,8 @@ public class CookieUtil {
     }
 
     public static String extractUsernameFromCookie(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null)
+            return null;
 
         return Arrays.stream(request.getCookies())
                 .filter(cookie -> "username".equals(cookie.getName()))
@@ -35,7 +37,8 @@ public class CookieUtil {
     }
 
     public static String extractJwtFromCookie(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null)
+            return null;
 
         return Arrays.stream(request.getCookies())
                 .filter(cookie -> "jwt".equals(cookie.getName()))
@@ -54,6 +57,24 @@ public class CookieUtil {
         cookie.setMaxAge(value == null ? 0 : 10 * 60 * 60);
 
         return cookie;
+    }
+
+    public static void clearCookies(HttpServletResponse response) {
+        Cookie jwtCookie = createCookie("jwt", "", true);
+        jwtCookie.setMaxAge(0);
+
+        Cookie usernameCookie = createCookie("username", "", false);
+        usernameCookie.setMaxAge(0);
+
+        Cookie jsessionCookie = new Cookie("JSESSIONID", "");
+        jsessionCookie.setHttpOnly(true);
+        jsessionCookie.setSecure(true);
+        jsessionCookie.setPath("/");
+        jsessionCookie.setMaxAge(0);
+
+        response.addHeader("Set-Cookie", createCookieWithSameSite(jwtCookie, "Strict"));
+        response.addHeader("Set-Cookie", createCookieWithSameSite(usernameCookie, "Strict"));
+        response.addHeader("Set-Cookie", createCookieWithSameSite(jsessionCookie, "Strict"));
     }
 
     public static String getSameSiteValue() {

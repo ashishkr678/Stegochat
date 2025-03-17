@@ -1,21 +1,17 @@
 import React, { useState } from "react";
 import { Menu, Users, Bell, Search, LogOut } from "lucide-react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { userLogout } from "../../../redux/slices/authSlice";
 
 const Topbar = ({ toggleSidebar }) => {
   const [selected, setSelected] = useState(null);
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-
   const handleClick = (id) => {
     setSelected(id === selected ? null : id);
   };
 
   const handleLogout = () => {
     dispatch(userLogout());
-    navigate("/login");
   };
 
   return (

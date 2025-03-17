@@ -20,6 +20,8 @@ public interface UserRepository extends MongoRepository<UsersEntity, String> {
 
     List<UsersEntity> findByUsernameIn(Set<String> usernames);
 
+    List<UsersEntity> findByUsernameStartingWith(String username);
+
     @Query("{ 'sentRequests': ?0 }")
     List<UsersEntity> findBySentRequestsContaining(String username);
 

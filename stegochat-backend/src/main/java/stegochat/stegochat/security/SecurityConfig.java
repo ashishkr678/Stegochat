@@ -27,23 +27,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors()
-                .and()
+                .cors().and()
                 .csrf().disable()
-                .authorizeHttpRequests()
-                .requestMatchers(
-                        "/api/users/register",
-                        "api/users/register/verify-otp",
-                        "/api/users/login",
-                        "/api/users/logout",
-                        "/api/users/resend-otp",
-                        "/api/users/forgot-password/send-otp",
-                        "/api/users/forgot-password/verify-otp",
-                        "/api/users/forgot-password/reset",
-                        "/ws/**")
-                .permitAll()
-                .anyRequest().authenticated()
-                .and()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/users/register",
+                                "/api/users/register/verify-otp",
+                                "/api/users/login",
+                                "/api/users/logout",
+                                "/api/users/resend-otp",
+                                "/api/users/forgot-password/send-otp",
+                                "/api/users/forgot-password/verify-otp",
+                                "/api/users/forgot-password/reset",
+                                "/api/users/check-auth",
+                                "/ws/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(
+                                org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

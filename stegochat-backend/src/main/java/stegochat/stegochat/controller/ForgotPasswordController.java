@@ -23,8 +23,10 @@ public class ForgotPasswordController {
             return ResponseEntity.badRequest().body(Map.of("error", "Username is required."));
         }
 
-        forgotPasswordService.sendOtpForPasswordReset(username);
-        return ResponseEntity.ok(Map.of("message", "OTP sent to registered email."));
+        String email = forgotPasswordService.sendOtpForPasswordReset(username);
+        return ResponseEntity.ok(Map.of(
+                "message", "OTP sent to registered email.",
+                "email", email));
     }
 
     // Verify OTP

@@ -53,10 +53,6 @@ const LoginPage = () => {
     }
   };
 
-  const handleForgotPassword = () => {
-    toast.info("Forgot password functionality coming soon!");
-  };
-
   return (
     <div className="h-screen bg-gradient-to-b from-blue-200 via-blue-100 to-white flex items-center justify-center px-4 sm:px-0">
       {/* For larger screens, show the container */}
@@ -91,7 +87,8 @@ const LoginPage = () => {
             </h2>
             <input
               type="text"
-              id="username"
+              id={isMobile ? "username-mobile" : "username"}
+              name="username"
               value={formData.username}
               onChange={handleInputChange}
               placeholder="Enter your username"
@@ -112,7 +109,8 @@ const LoginPage = () => {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                id="password"
+                id={isMobile ? "password-mobile" : "password"}
+                name="password"
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Enter your password"
@@ -135,12 +133,12 @@ const LoginPage = () => {
 
           {/* Forgot Password */}
           <div className="text-right">
-            <button
-              onClick={handleForgotPassword}
+            <Link
+              to="/forgot-password"
               className="text-gray-500 text-sm font-medium hover:text-gray-700"
             >
               Forgot Password?
-            </button>
+            </Link>
           </div>
         </div>
 

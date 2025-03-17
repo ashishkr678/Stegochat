@@ -6,7 +6,7 @@ const ChatPage = () => {
   const [selectedChat, setSelectedChat] = useState(null);
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex h-[calc(100vh-56px)] mt-14 ml-14">
       
       <ChatList selectedChat={selectedChat} setSelectedChat={setSelectedChat} />
       <ChatWindow selectedChat={selectedChat} />

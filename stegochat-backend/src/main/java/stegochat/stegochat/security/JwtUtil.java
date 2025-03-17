@@ -15,6 +15,7 @@ import io.jsonwebtoken.JwtException;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import stegochat.stegochat.entity.UsersEntity;
 import stegochat.stegochat.repository.UserRepository;
@@ -71,4 +72,5 @@ public class JwtUtil {
             userRepository.save(user);
         }
     }
+    
 }

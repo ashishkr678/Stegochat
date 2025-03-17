@@ -1,8 +1,10 @@
 package stegochat.stegochat.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -116,14 +118,14 @@ public class UserServiceImpl implements UserService {
         Cookie jwtCookie = CookieUtil.createCookie("jwt", token, true);
         Cookie usernameCookie = CookieUtil.createCookie("username", user.getUsername(), false);
 
-        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, CookieUtil.getSameSiteValue()));
+        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, "Strict"));
         response.addHeader("Set-Cookie",
-                CookieUtil.createCookieWithSameSite(usernameCookie, CookieUtil.getSameSiteValue()));
+                CookieUtil.createCookieWithSameSite(usernameCookie, "Strict"));
 
-        UserDTO userDTO = UserMapper.toDTO(user);
-        request.getSession().setAttribute("userProfile", userDTO);
+        request.getSession().invalidate();
+        request.getSession(true).setAttribute("userProfile", UserMapper.toDTO(user));
 
-        return userDTO;
+        return UserMapper.toDTO(user);
     }
 
     // Initiate Email Update with OTP
@@ -184,10 +186,29 @@ public class UserServiceImpl implements UserService {
     public UserDTO getUserProfile(HttpServletRequest request) {
 
         String username = CookieUtil.extractUsernameFromCookie(request);
+        
+        if (username == null || username.isEmpty()) {
+            throw new AuthenticationException("Invalid session. Please log in again.");
+        }
         UsersEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         return UserMapper.toDTO(user);
+    }
+
+    // Search users
+    @Override
+    public List<UserSummaryDTO> searchUsersByUsername(String query) {
+        List<UserSummaryDTO> users = userRepository.findByUsernameStartingWith(query)
+                .stream()
+                .map(UserMapper::toSummaryDTO)
+                .collect(Collectors.toList());
+
+        if (users.isEmpty()) {
+            throw new ResourceNotFoundException("No users found.");
+        }
+
+        return users;
     }
 
     // Fetch User by Username
@@ -265,8 +286,15 @@ public class UserServiceImpl implements UserService {
         Cookie usernameCookie = CookieUtil.createCookie("username", "", false);
         usernameCookie.setMaxAge(0);
 
+        Cookie jsessionCookie = new Cookie("JSESSIONID", "");
+        jsessionCookie.setHttpOnly(true);
+        jsessionCookie.setSecure(true);
+        jsessionCookie.setPath("/");
+        jsessionCookie.setMaxAge(0);
+
         response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jwtCookie, "Strict"));
         response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(usernameCookie, "Strict"));
+        response.addHeader("Set-Cookie", CookieUtil.createCookieWithSameSite(jsessionCookie, "Strict")); // ✅ Add this
     }
 
 }
