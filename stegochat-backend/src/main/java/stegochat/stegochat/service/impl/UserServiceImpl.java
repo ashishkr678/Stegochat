@@ -196,18 +196,15 @@ public class UserServiceImpl implements UserService {
         return UserMapper.toDTO(user);
     }
 
+    // Search User
     @Override
     public List<UserSummaryDTO> searchUsersByUsername(String query, HttpServletRequest request) {
-        // Retrieve the logged-in user's profile from session
         UserDTO loggedInUser = (UserDTO) request.getSession().getAttribute("userProfile");
 
-        // Get the logged-in user's username
         String loggedInUsername = (loggedInUser != null) ? loggedInUser.getUsername() : null;
 
-        // Fetch users whose username starts with the query
         List<UserSummaryDTO> users = userRepository.findByUsernameStartingWith(query)
                 .stream()
-                // Exclude the logged-in user from the search results
                 .filter(user -> !user.getUsername().equals(loggedInUsername))
                 .map(UserMapper::toSummaryDTO)
                 .collect(Collectors.toList());

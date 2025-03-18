@@ -306,7 +306,7 @@ public class FriendServiceImpl implements FriendService {
                 return userRepository.findByUsernameIn(user.getFriends())
                                 .stream()
                                 .sorted((u1, u2) -> u1.getUsername().compareToIgnoreCase(u2.getUsername()))
-                                .map(UserMapper::toSummaryDTO) // ✅ Return only required fields
+                                .map(UserMapper::toSummaryDTO)
                                 .collect(Collectors.toList());
         }
 

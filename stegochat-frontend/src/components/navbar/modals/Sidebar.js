@@ -18,7 +18,7 @@ const Sidebar = ({ isOpen, selectedChat, setSelectedChat }) => {
       <div
         className={`fixed left-0 top-14 h-full bg-blue-200 shadow-lg transition-all duration-300 ${
           isOpen ? "w-52" : "w-14"
-        } flex flex-col z-50`}
+        } flex flex-col z-40`}
       >
         <nav className="flex flex-col space-y-6 w-full mt-4">
           <button

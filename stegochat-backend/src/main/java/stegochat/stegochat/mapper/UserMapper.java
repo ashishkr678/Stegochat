@@ -79,6 +79,10 @@ public class UserMapper {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getAbout(),
-                user.getProfilePicture());
+                user.getProfilePicture(),
+                user.isOnline(),
+                user.getLastSeen()
+        );
     }
+    
 }
