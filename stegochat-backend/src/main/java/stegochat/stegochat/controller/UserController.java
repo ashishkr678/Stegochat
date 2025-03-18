@@ -73,9 +73,9 @@ public class UserController {
 
     // Search users
     @GetMapping("/search")
-    public ResponseEntity<?> searchUsers(@RequestParam String query) {
+    public ResponseEntity<?> searchUsers(@RequestParam String query, HttpServletRequest request) {
         try {
-            List<UserSummaryDTO> users = userService.searchUsersByUsername(query);
+            List<UserSummaryDTO> users = userService.searchUsersByUsername(query, request);
             return ResponseEntity.ok(users);
         } catch (ResourceNotFoundException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", ex.getMessage()));

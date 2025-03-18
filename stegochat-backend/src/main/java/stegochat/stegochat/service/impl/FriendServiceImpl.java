@@ -199,6 +199,46 @@ public class FriendServiceImpl implements FriendService {
 
         }
 
+        // Cancel Requests
+        @Override
+        @Transactional
+        public void cancelFriendRequest(HttpServletRequest request, String receiverUsername) {
+                String senderUsername = CookieUtil.extractUsernameFromCookie(request);
+
+                UsersEntity sender = userRepository.findByUsername(senderUsername)
+                                .orElseThrow(() -> new ResourceNotFoundException("Sender not found."));
+
+                UsersEntity receiver = userRepository.findByUsername(receiverUsername)
+                                .orElseThrow(() -> new ResourceNotFoundException("Receiver not found."));
+
+                if (!sender.getSentRequests().contains(receiverUsername)) {
+                        throw new BadRequestException("Friend request not found.");
+                }
+
+                LocalDateTime now = LocalDateTime.now();
+                BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, UsersEntity.class);
+
+                bulkOps.updateOne(
+                                Query.query(Criteria.where("username").is(senderUsername)),
+                                new Update()
+                                                .pull("sentRequests", receiverUsername)
+                                                .set("metadata.requestCanceled." + receiverUsername, now));
+
+                bulkOps.updateOne(
+                                Query.query(Criteria.where("username").is(receiverUsername)),
+                                new Update()
+                                                .pull("receivedRequests", senderUsername)
+                                                .set("metadata.requestCanceled." + senderUsername, now));
+
+                bulkOps.execute();
+
+                HttpSession session = request.getSession(false);
+                if (session != null) {
+                        UserDTO updatedUserDTO = UserMapper.toDTO(sender);
+                        session.setAttribute("userProfile", updatedUserDTO);
+                }
+        }
+
         // Get Online Friends
         @Override
         public List<UserSummaryDTO> getOnlineFriends(HttpServletRequest request) {
@@ -281,5 +321,5 @@ public class FriendServiceImpl implements FriendService {
                                 .map(UserMapper::toSummaryDTO)
                                 .collect(Collectors.toList());
         }
-            
+
 }

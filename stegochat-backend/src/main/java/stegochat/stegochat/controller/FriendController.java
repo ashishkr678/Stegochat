@@ -66,6 +66,18 @@ public class FriendController {
         return ResponseEntity.ok(Map.of("message", "Friend removed successfully."));
     }
 
+    // Cancel requests
+    @PostMapping("/cancel-request")
+    public ResponseEntity<Map<String, String>> cancelFriendRequest(
+            HttpServletRequest request,
+            @RequestBody Map<String, String> requestBody) {
+
+        String receiverUsername = requestBody.get("receiverUsername");
+        friendService.cancelFriendRequest(request, receiverUsername);
+
+        return ResponseEntity.ok(Map.of("message", "Friend request canceled."));
+    }
+
     // ✅ Get Online Friends
     @GetMapping("/online")
     public ResponseEntity<List<UserSummaryDTO>> getOnlineFriends(HttpServletRequest request) {

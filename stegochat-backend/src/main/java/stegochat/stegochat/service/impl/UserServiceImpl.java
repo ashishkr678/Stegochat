@@ -186,7 +186,7 @@ public class UserServiceImpl implements UserService {
     public UserDTO getUserProfile(HttpServletRequest request) {
 
         String username = CookieUtil.extractUsernameFromCookie(request);
-        
+
         if (username == null || username.isEmpty()) {
             throw new AuthenticationException("Invalid session. Please log in again.");
         }
@@ -196,16 +196,24 @@ public class UserServiceImpl implements UserService {
         return UserMapper.toDTO(user);
     }
 
-    // Search users
     @Override
-    public List<UserSummaryDTO> searchUsersByUsername(String query) {
+    public List<UserSummaryDTO> searchUsersByUsername(String query, HttpServletRequest request) {
+        // Retrieve the logged-in user's profile from session
+        UserDTO loggedInUser = (UserDTO) request.getSession().getAttribute("userProfile");
+
+        // Get the logged-in user's username
+        String loggedInUsername = (loggedInUser != null) ? loggedInUser.getUsername() : null;
+
+        // Fetch users whose username starts with the query
         List<UserSummaryDTO> users = userRepository.findByUsernameStartingWith(query)
                 .stream()
+                // Exclude the logged-in user from the search results
+                .filter(user -> !user.getUsername().equals(loggedInUsername))
                 .map(UserMapper::toSummaryDTO)
                 .collect(Collectors.toList());
 
         if (users.isEmpty()) {
-            throw new ResourceNotFoundException("No users found.");
+            throw new ResourceNotFoundException("User not found");
         }
 
         return users;

@@ -13,6 +13,8 @@ public interface FriendService {
     void acceptFriendRequest(HttpServletRequest request, String senderUsername);
     
     void rejectFriendRequest(HttpServletRequest request, String senderUsername);
+
+    void cancelFriendRequest(HttpServletRequest request, String receiverUsername);
     
     void removeFriend(HttpServletRequest request, String friendUsername);
     

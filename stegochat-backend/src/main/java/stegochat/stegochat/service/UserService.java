@@ -20,7 +20,7 @@ public interface UserService {
 
     UserDTO getUserProfile(HttpServletRequest request);
 
-    List<UserSummaryDTO> searchUsersByUsername(String query);
+    List<UserSummaryDTO> searchUsersByUsername(String query, HttpServletRequest request);
 
     Optional<UserSummaryDTO> getUserByUsername(String username);
 

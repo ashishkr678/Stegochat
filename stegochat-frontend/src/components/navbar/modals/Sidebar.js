@@ -1,28 +1,32 @@
 import React, { useState } from "react";
 import { MessageCircle, Users, Download } from "lucide-react";
-import { Link } from "react-router-dom";
+import RecentChat from "../../chats/RecentChat";
+import FriendList from "../../FriendList";
 
-const Sidebar = ({ isOpen }) => {
-  const [selected, setSelected] = useState(null);
+const Sidebar = ({ isOpen, selectedChat, setSelectedChat }) => {
+  const [selected, setSelected] = useState(1);
 
   const handleClick = (id) => {
-    setSelected(id === selected ? null : id);
+    if (selected !== id) {
+      setSelected(id);
+    }
   };
 
   return (
-    <div
-      className={`fixed left-0 top-14 h-[calc(100vh-56px)] bg-blue-200 shadow-lg transition-all duration-300 ${
-        isOpen ? "w-52" : "w-14"
-      } flex flex-col items-center z-50`}
-    >
-      <nav className="flex flex-col space-y-6 w-full mt-4">
-        <button
-          onClick={() => handleClick(1)}
-          className={`flex items-center space-x-3 text-gray-700 hover:bg-blue-300 p-2 rounded-md w-full transition-all duration-300 ${
-            isOpen ? "justify-start pl-4" : "justify-center"
-          }`}
-        >
-          <Link to="/">
+    <div className="flex h-[calc(100vh-56px)] w-1/3">
+      {/* Sidebar Navigation */}
+      <div
+        className={`fixed left-0 top-14 h-full bg-blue-200 shadow-lg transition-all duration-300 ${
+          isOpen ? "w-52" : "w-14"
+        } flex flex-col z-50`}
+      >
+        <nav className="flex flex-col space-y-6 w-full mt-4">
+          <button
+            onClick={() => handleClick(1)}
+            className={`flex items-center space-x-3 text-gray-700 hover:bg-blue-300 p-2 rounded-md w-full transition-all duration-300 ${
+              isOpen ? "justify-start pl-4" : "justify-center"
+            }`}
+          >
             <MessageCircle
               size={20}
               className={`${
@@ -30,37 +34,55 @@ const Sidebar = ({ isOpen }) => {
               }`}
             />
             {isOpen && <span>Chats</span>}
-          </Link>
-        </button>
-        <button
-          onClick={() => handleClick(2)}
-          className={`flex items-center space-x-3 text-gray-700 hover:bg-blue-300 p-2 rounded-md w-full transition-all duration-300 ${
-            isOpen ? "justify-start pl-4" : "justify-center"
-          }`}
-        >
-          <Users
-            size={20}
-            className={`${
-              selected === 2 ? "fill-current text-gray-700" : "text-gray-700"
+          </button>
+
+          <button
+            onClick={() => handleClick(2)}
+            className={`flex items-center space-x-3 text-gray-700 hover:bg-blue-300 p-2 rounded-md w-full transition-all duration-300 ${
+              isOpen ? "justify-start pl-4" : "justify-center"
             }`}
-          />
-          {isOpen && <span>Groups</span>}
-        </button>
-        <button
-          onClick={() => handleClick(3)}
-          className={`flex items-center space-x-3 text-gray-700 hover:bg-blue-300 p-2 rounded-md w-full transition-all duration-300 ${
-            isOpen ? "justify-start pl-4" : "justify-center"
-          }`}
-        >
-          <Download
-            size={20}
-            className={`${
-              selected === 3 ? "fill-current text-gray-700" : "text-gray-700"
+          >
+            <Users
+              size={20}
+              className={`${
+                selected === 2 ? "fill-current text-gray-700" : "text-gray-700"
+              }`}
+            />
+            {isOpen && <span>Groups</span>}
+          </button>
+          <button
+            onClick={() => handleClick(3)}
+            className={`flex items-center space-x-3 text-gray-700 hover:bg-blue-300 p-2 rounded-md w-full transition-all duration-300 ${
+              isOpen ? "justify-start pl-4" : "justify-center"
             }`}
+          >
+            <Download
+              size={20}
+              className={`${
+                selected === 3 ? "fill-current text-gray-700" : "text-gray-700"
+              }`}
+            />
+            {isOpen && <span>Downloads</span>}
+          </button>
+        </nav>
+      </div>
+
+      {/* Recent Chats Panel (Appears Beside Sidebar) */}
+      {selected === 1 && (
+        <div className="w-full mt-14 ml-14 bg-gray-100 shadow-md transition-all duration-300">
+          <RecentChat
+            selectedChat={selectedChat}
+            setSelectedChat={setSelectedChat}
           />
-          {isOpen && <span>Downloads</span>}
-        </button>
-      </nav>
+        </div>
+      )}
+
+      {/* Recent Chats Panel (Appears Beside Sidebar) */}
+      {selected === 2 && (
+        <div className="w-full mt-14 ml-14 bg-gray-100 shadow-md transition-all duration-300">
+          <FriendList />
+        </div>
+      )}
     </div>
   );
 };
